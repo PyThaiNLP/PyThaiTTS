@@ -2,7 +2,7 @@ name: Deploy Docs dev
 on:
   push:
     branches:
-    - master
+    - main
 
 jobs:
   release:
