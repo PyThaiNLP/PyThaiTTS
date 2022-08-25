@@ -19,4 +19,4 @@ file = tts.tts("ภาษาไทย ง่าย มาก มาก") # It wi
 wave = tts.tts("ภาษาไทย ง่าย มาก มาก",return_type="waveform") # It will get waveform.
 ```
 
-You can see more at [https://pythainlp.github.io/pythaitts](https://pythainlp.github.io/pythaitts).
+You can see more at [https://pythainlp.github.io/PyThaiTTS/](https://pythainlp.github.io/PyThaiTTS/).
