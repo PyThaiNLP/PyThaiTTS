@@ -70,9 +70,56 @@
              
   <section id="pythaitts">
 <h1>PyThaiTTS<a class="headerlink" href="#pythaitts" title="Permalink to this heading"></a></h1>
-<p>Open source Thai Text-to-speech in Python</p>
-<div class="toctree-wrapper compound">
-</div>
+<p>Open Source Thai Text-to-speech library in Python</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="pythaitts.TTS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pythaitts.</span></span><span class="sig-name descname"><span class="pre">TTS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pretrained</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'khanomtan'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'last_checkpoint'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pythaitts.html#TTS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pythaitts.TTS" title="Permalink to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="pythaitts.TTS.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pretrained</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'khanomtan'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'last_checkpoint'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><span class="pre">None</span></a></span></span><a class="reference internal" href="_modules/pythaitts.html#TTS.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pythaitts.TTS.__init__" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pretrained</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – TTS pretrained (khanomtan)</p></li>
+<li><p><strong>mode</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – pretrained mode</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt><strong>Options for mode</strong></dt><dd><ul class="simple">
+<li><p><em>last_checkpoint</em> (default) - last checkpoint of model</p></li>
+<li><p><em>best_model</em> - Best model (best loss)</p></li>
+</ul>
+</dd>
+</dl>
+<p>You can see more about khanomtan tts at <a class="reference external" href="https://github.com/wannaphong/KhanomTan-TTS-v1.0">https://github.com/wannaphong/KhanomTan-TTS-v1.0</a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pythaitts.TTS.load_pretrained">
+<span class="sig-name descname"><span class="pre">load_pretrained</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pythaitts.html#TTS.load_pretrained"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pythaitts.TTS.load_pretrained" title="Permalink to this definition"></a></dt>
+<dd><p>Load pretrined</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pythaitts.TTS.tts">
+<span class="sig-name descname"><span class="pre">tts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">speaker_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Tsynctwo'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'th-th'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'file'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pythaitts.html#TTS.tts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pythaitts.TTS.tts" title="Permalink to this definition"></a></dt>
+<dd><p>speech synthesis</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – text</p></li>
+<li><p><strong>speaker_idx</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – speaker (default is Tsynctwo)</p></li>
+<li><p><strong>language_idx</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – language (default is th-th)</p></li>
+<li><p><strong>return_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – return type (default is file)</p></li>
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – path filename for save wav file if return_type is file.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 
 
