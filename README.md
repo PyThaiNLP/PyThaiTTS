@@ -1,5 +1,5 @@
 # PyThaiTTS
-Open source Thai Text-to-speech in Python
+Open Source Thai Text-to-speech library in Python
 
 License: [Apache-2.0 License](https://github.com/PyThaiNLP/pythaitts/blob/main/LICENSE)
 

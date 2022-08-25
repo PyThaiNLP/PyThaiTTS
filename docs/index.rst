@@ -2,11 +2,7 @@
 PyThaiTTS
 =========
 
-Open source Thai Text-to-speech in Python
+Open Source Thai Text-to-speech library in Python
 
-.. toctree::
-   :glob:
-   :maxdepth: 1
-   :caption: Package reference:
-
-   api/*
+.. autoclass:: TTS
+   :members:
