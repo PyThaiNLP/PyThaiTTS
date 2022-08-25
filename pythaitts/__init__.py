@@ -26,7 +26,7 @@ class TTS:
         Load pretrined
         """
         if self.pretrained == "khanomtan":
-            from pythaitts.pretrained.khanomtan_tts import KhanomTan
+            from pythaitts.pretrained import KhanomTan
             self.model = KhanomTan(mode=self.mode)
         else:
             raise NotImplemented(
