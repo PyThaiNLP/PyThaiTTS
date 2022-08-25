@@ -10,7 +10,7 @@ with open("requirements.txt","r",encoding="utf-8-sig") as f:
 setup(
     name="PyThaiTTS",
     version="0.1.0",
-    description="Lao Natural Language Processing library",
+    description="Open Source Thai Text-to-speech library in Python",
     long_description=readme,
     long_description_content_type="text/markdown",
     author="Wannaphong",
@@ -42,7 +42,7 @@ setup(
         "Topic :: Text Processing :: Linguistic",
     ],
     project_urls={
-        "Documentation": "https://github.com/pythainlp/pythaitts/wiki",
+        "Documentation": "https://github.com/pythainlp/pythaitts",
         "Source": "https://github.com/pythainlp/pythaitts",
         "Bug Reports": "https://github.com/pythainlp/pythaitts/issues",
     },
