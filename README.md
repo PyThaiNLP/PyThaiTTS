@@ -1,6 +1,8 @@
 # PyThaiTTS
 Open Source Thai Text-to-speech library in Python
 
+<a href="https://pepy.tech/project/pythaitts"><img alt="Download" src="https://pepy.tech/badge/pythaitts/month"/></a>
+
 License: [Apache-2.0 License](https://github.com/PyThaiNLP/pythaitts/blob/main/LICENSE)
 
 ## Install
