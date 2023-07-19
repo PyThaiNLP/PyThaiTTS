@@ -1,3 +1,4 @@
 TTS>=0.8.0
 pythainlp>=3.0.0
 huggingface_hub
+torch
