@@ -37,7 +37,8 @@ class LunarlistModel:
         import soundfile as sf
         if filename != None:
             sf.write(filename, wavs[0], 22050)
+            return filename
         else:
             with tempfile.NamedTemporaryFile(suffix = ".wav", delete = False) as fp:
-                self.synthesizer.save_wav(wavs[0], fp)
-        return fp.name
+                fp.write(wavs[0])
+            return fp.name
