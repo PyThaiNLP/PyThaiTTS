@@ -35,7 +35,7 @@ class TTS:
             self.model = KhanomTan(mode=self.mode, version=version)
         elif self.pretrained == "lunarlist":
             from pythaitts.pretrained import LunarlistModel
-            self.model = KhanomTan(mode=self.mode, device=self.device)
+            self.model = LunarlistModel(mode=self.mode, device=self.device)
         else:
             raise NotImplemented(
                 "PyThaiTTS doesn't support %s pretrained." % self.pretrained
