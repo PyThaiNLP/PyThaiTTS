@@ -1,6 +1,8 @@
 # PyThaiTTS
 Open Source Thai Text-to-speech library in Python
 
+[Google Colab](https://colab.research.google.com/github/PyThaiNLP/PyThaiTTS/blob/dev/notebook/use_lunarlist_model.ipynb) | [Docs](https://pythainlp.github.io/PyThaiTTS/) | [Notebooks](https://github.com/PyThaiNLP/PyThaiTTS/tree/dev/notebook)
+
 License: [Apache-2.0 License](https://github.com/PyThaiNLP/pythaitts/blob/main/LICENSE)
 
 ## Install
