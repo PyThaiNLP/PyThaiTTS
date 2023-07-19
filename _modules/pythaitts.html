@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pythaitts &mdash; PyThaiTTS 0.1.1 documentation</title>
+  <title>pythaitts &mdash; PyThaiTTS 0.2.0 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -26,14 +26,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../index.html" class="icon icon-home"> PyThaiTTS
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyThaiTTS
           </a>
               <div class="version">
-                <unknown> (0.1.1) <br /> Published date: <unknown date>
+                <unknown> (0.2.0) <br /> Published date: <unknown date>
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -54,9 +58,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="index.html">Module code</a> &raquo;</li>
-      <li>pythaitts</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pythaitts</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -70,13 +74,13 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">PyThaiTTS</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.1.1&quot;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.2.0&quot;</span>
 
 
 <div class="viewcode-block" id="TTS"><a class="viewcode-back" href="../index.html#pythaitts.TTS">[docs]</a><span class="k">class</span> <span class="nc">TTS</span><span class="p">:</span>
-<div class="viewcode-block" id="TTS.__init__"><a class="viewcode-back" href="../index.html#pythaitts.TTS.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pretrained</span><span class="o">=</span><span class="s2">&quot;khanomtan&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;last_checkpoint&quot;</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;1.0&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        :param str pretrained: TTS pretrained (khanomtan)</span>
+<div class="viewcode-block" id="TTS.__init__"><a class="viewcode-back" href="../index.html#pythaitts.TTS.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pretrained</span><span class="o">=</span><span class="s2">&quot;khanomtan&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;last_checkpoint&quot;</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;1.0&quot;</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param str pretrained: TTS pretrained (khanomtan, lunarlist)</span>
 <span class="sd">        :param str mode: pretrained mode</span>
 <span class="sd">        :param str version: model version (default is 1.0 or 1.1)</span>
 
@@ -86,25 +90,33 @@
 <span class="sd">        </span>
 <span class="sd">        You can see more about khanomtan tts at `https://github.com/wannaphong/KhanomTan-TTS-v1.0 &lt;https://github.com/wannaphong/KhanomTan-TTS-v1.0&gt;`_</span>
 <span class="sd">        and `https://github.com/wannaphong/KhanomTan-TTS-v1.1 &lt;https://github.com/wannaphong/KhanomTan-TTS-v1.1&gt;`_</span>
+<span class="sd">        </span>
+<span class="sd">        For lunarlist tts model, you must to install nemo before use the model by pip install nemo_toolkit[&#39;tts&#39;].</span>
+<span class="sd">        You can see more about lunarlist tts at `https://link.medium.com/OpPjQis6wBb &lt;https://link.medium.com/OpPjQis6wBb&gt;`_</span>
+<span class="sd">        </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">=</span> <span class="n">pretrained</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load_pretrained</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="TTS.load_pretrained"><a class="viewcode-back" href="../index.html#pythaitts.TTS.load_pretrained">[docs]</a>    <span class="k">def</span> <span class="nf">load_pretrained</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">version</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load pretrined</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;khanomtan&quot;</span><span class="p">:</span>
             <span class="kn">from</span> <span class="nn">pythaitts.pretrained</span> <span class="kn">import</span> <span class="n">KhanomTan</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">KhanomTan</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;lunarlist&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">pythaitts.pretrained</span> <span class="kn">import</span> <span class="n">LunarlistModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">LunarlistModel</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="bp">NotImplemented</span><span class="p">(</span>
                 <span class="s2">&quot;PyThaiTTS doesn&#39;t support </span><span class="si">%s</span><span class="s2"> pretrained.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span>
             <span class="p">)</span></div>
 
 <div class="viewcode-block" id="TTS.tts"><a class="viewcode-back" href="../index.html#pythaitts.TTS.tts">[docs]</a>    <span class="k">def</span> <span class="nf">tts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Linda&quot;</span><span class="p">,</span> <span class="n">language_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;th-th&quot;</span><span class="p">,</span> <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        speech synthesis</span>
 
 <span class="sd">        :param str text: text</span>
@@ -113,6 +125,8 @@
 <span class="sd">        :param str return_type: return type (default is file)</span>
 <span class="sd">        :param str filename: path filename for save wav file if return_type is file.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;lunarlist&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span><span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
             <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
             <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
@@ -129,7 +143,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2017-2022, PyThaiTTS (Apache Software License 2.0).</p>
+    <p>&#169; Copyright 2017-2023, PyThaiTTS (Apache Software License 2.0).</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
