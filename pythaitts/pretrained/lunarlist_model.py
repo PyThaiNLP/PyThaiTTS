@@ -40,5 +40,5 @@ class LunarlistModel:
             return filename
         else:
             with tempfile.NamedTemporaryFile(suffix = ".wav", delete = False) as fp:
-                fp.write(wavs[0])
+                sf.write(fp.name, wavs[0], 22050)
             return fp.name
