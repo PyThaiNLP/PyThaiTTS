@@ -2,7 +2,7 @@
 """
 PyThaiTTS
 """
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 
 class TTS:
@@ -19,7 +19,9 @@ class TTS:
         You can see more about khanomtan tts at `https://github.com/wannaphong/KhanomTan-TTS-v1.0 <https://github.com/wannaphong/KhanomTan-TTS-v1.0>`_
         and `https://github.com/wannaphong/KhanomTan-TTS-v1.1 <https://github.com/wannaphong/KhanomTan-TTS-v1.1>`_
         
+        For lunarlist tts model, you must to install nemo before use the model by pip install nemo_toolkit['tts'].
         You can see more about lunarlist tts at `https://link.medium.com/OpPjQis6wBb <https://link.medium.com/OpPjQis6wBb>`_
+        
         """
         self.pretrained = pretrained
         self.mode = mode
