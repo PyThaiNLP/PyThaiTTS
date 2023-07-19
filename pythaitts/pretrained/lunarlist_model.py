@@ -24,8 +24,9 @@ class LunarlistModel:
             self.model = Tacotron2Model.from_pretrained("lunarlist/tts-thai-last-step").to(self.device)
         else:
             self.model = Tacotron2Model.from_pretrained("lunarlist/tts-thai").to(self.device)
+        self.dict_idx={k:i for i,k in enumerate(self.model.hparams["cfg"]['labels'])}
     def tts(self, text: str):
-        parsed2=torch.Tensor([[66]+[dict_idx[i] for i in text if i]+[67]]).int().to(self.device)
+        parsed2=torch.Tensor([[66]+[self.dict_idx[i] for i in text if i]+[67]]).int().to(self.device)
         spectrogram2 = self.model.generate_spectrogram(tokens=parsed2)
         audio2 = self.vcoder_model.convert_spectrogram_to_audio(spec=spectrogram2)
         return audio2.to('cpu').detach().numpy()
