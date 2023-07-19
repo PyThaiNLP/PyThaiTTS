@@ -15,7 +15,7 @@ Install by pip:
 from pythaitts import TTS
 
 tts = TTS()
-file = tts.tts("ภาษาไทย ง่าย มาก มาก") # It will get temp file path.
+file = tts.tts("ภาษาไทย ง่าย มาก มาก", filename="cat.wav") # It will get wav file path.
 wave = tts.tts("ภาษาไทย ง่าย มาก มาก",return_type="waveform") # It will get waveform.
 ```
 
