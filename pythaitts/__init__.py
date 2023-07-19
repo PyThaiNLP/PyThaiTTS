@@ -51,6 +51,8 @@ class TTS:
         :param str return_type: return type (default is file)
         :param str filename: path filename for save wav file if return_type is file.
         """
+        if self.pretrained == "lunarlist":
+            return self.model(text=text,return_type=return_type,filename=filename)
         return self.model(
             text=text,
             speaker_idx=speaker_idx,
