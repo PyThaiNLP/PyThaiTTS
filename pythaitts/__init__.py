@@ -30,7 +30,7 @@ class TTS:
 
     def load_pretrained(self,version):
         """
-        Load pretrined
+        Load pretrained
         """
         if self.pretrained == "khanomtan":
             from pythaitts.pretrained import KhanomTan
