@@ -5,7 +5,10 @@ Lunarlist TTS model
 You can see more about lunarlist tts at `https://link.medium.com/OpPjQis6wBb <https://link.medium.com/OpPjQis6wBb>`_
 """
 import tempfile
-import torch
+try:
+    import torch
+except ImportError:
+    raise ImportError("You must to install torch before use this model.")
 
 
 class LunarlistModel:
