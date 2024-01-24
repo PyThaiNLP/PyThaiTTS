@@ -2,15 +2,16 @@
 """
 PyThaiTTS
 """
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 
 class TTS:
-    def __init__(self, pretrained="khanomtan", mode="last_checkpoint", version="1.0", device:str="cpu") -> None:
+    def __init__(self, pretrained="lunarlist_onnx", mode="last_checkpoint", version="1.0", device:str="cpu") -> None:
         """
-        :param str pretrained: TTS pretrained (khanomtan, lunarlist)
-        :param str mode: pretrained mode
+        :param str pretrained: TTS pretrained (lunarlist_onnx, khanomtan, lunarlist)
+        :param str mode: pretrained mode (lunarlist_onnx don't support)
         :param str version: model version (default is 1.0 or 1.1)
+        :param str device: device for running model. (lunarlist_onnx support CPU only.)
 
         **Options for mode**
             * *last_checkpoint* (default) - last checkpoint of model
@@ -21,6 +22,11 @@ class TTS:
         
         For lunarlist tts model, you must to install nemo before use the model by pip install nemo_toolkit['tts'].
         You can see more about lunarlist tts at `https://link.medium.com/OpPjQis6wBb <https://link.medium.com/OpPjQis6wBb>`_
+
+        For lunarlist_onnx tts model, \
+        You can see more about lunarlist tts at `https://github.com/PyThaiNLP/thaitts-onnx <https://github.com/PyThaiNLP/thaitts-onnx>`_
+
+
         
         """
         self.pretrained = pretrained
@@ -30,13 +36,16 @@ class TTS:
 
     def load_pretrained(self,version):
         """
-        Load pretrined
+        Load pretrained
         """
-        if self.pretrained == "khanomtan":
-            from pythaitts.pretrained import KhanomTan
+        if self.pretrained == "lunarlist_onnx":
+            from pythaitts.pretrained.lunarlist_onnx import LunarlistONNX
+            self.model = LunarlistONNX()
+        elif self.pretrained == "khanomtan":
+            from pythaitts.pretrained.khanomtan_tts import KhanomTan
             self.model = KhanomTan(mode=self.mode, version=version)
         elif self.pretrained == "lunarlist":
-            from pythaitts.pretrained import LunarlistModel
+            from pythaitts.pretrained.lunarlist_model import LunarlistModel
             self.model = LunarlistModel(mode=self.mode, device=self.device)
         else:
             raise NotImplemented(
@@ -53,7 +62,7 @@ class TTS:
         :param str return_type: return type (default is file)
         :param str filename: path filename for save wav file if return_type is file.
         """
-        if self.pretrained == "lunarlist":
+        if self.pretrained == "lunarlist" or self.pretrained == "lunarlist_onnx":
             return self.model(text=text,return_type=return_type,filename=filename)
         return self.model(
             text=text,

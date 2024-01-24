@@ -9,7 +9,7 @@ with open("requirements.txt","r",encoding="utf-8-sig") as f:
 
 setup(
     name="PyThaiTTS",
-    version="0.2.1",
+    version="0.3.0",
     description="Open Source Thai Text-to-speech library in Python",
     long_description=readme,
     long_description_content_type="text/markdown",
