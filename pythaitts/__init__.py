@@ -10,10 +10,10 @@ from pythaitts.preprocess import preprocess_text, num_to_thai, expand_maiyamok
 class TTS:
     def __init__(self, pretrained="lunarlist_onnx", mode="last_checkpoint", version="1.0", device:str="cpu") -> None:
         """
-        :param str pretrained: TTS pretrained (lunarlist_onnx, khanomtan, lunarlist, vachana)
+        :param str pretrained: TTS pretrained (lunarlist_onnx, khanomtan, lunarlist, vachana, archa)
         :param str mode: pretrained mode (lunarlist_onnx and vachana don't support)
         :param str version: model version (default is 1.0 or 1.1)
-        :param str device: device for running model. (lunarlist_onnx and vachana support CPU only.)
+        :param str device: device for running model. (lunarlist_onnx and vachana support CPU only. archa supports cpu and cuda.)
 
         **Options for mode**
             * *last_checkpoint* (default) - last checkpoint of model
@@ -31,6 +31,10 @@ class TTS:
 
         For vachana tts model, \
         You can see more about vachana tts at `https://github.com/VYNCX/VachanaTTS2 <https://github.com/VYNCX/VachanaTTS2>`_
+
+        For archa tts model, you must install the required packages before use: \
+        pip install torch transformers snac soundfile noisereduce scipy numpy. \
+        You can see more about archa tts at `https://github.com/YangNobody12/Archa-TTS-0.5B-th <https://github.com/YangNobody12/Archa-TTS-0.5B-th>`_
 
         
         """
@@ -55,6 +59,9 @@ class TTS:
         elif self.pretrained == "vachana":
             from pythaitts.pretrained.vachana_tts import VachanaTTS
             self.model = VachanaTTS()
+        elif self.pretrained == "archa":
+            from pythaitts.pretrained.archa_tts import ArchaTTS
+            self.model = ArchaTTS(device=self.device)
         else:
             raise NotImplementedError(
                 "PyThaiTTS doesn't support %s pretrained." % self.pretrained
@@ -80,6 +87,8 @@ class TTS:
             return self.model(text=text,return_type=return_type,filename=filename)
         elif self.pretrained == "vachana":
             return self.model(text=text,speaker_idx=speaker_idx,return_type=return_type,filename=filename)
+        elif self.pretrained == "archa":
+            return self.model(text=text,return_type=return_type,filename=filename)
         return self.model(
             text=text,
             speaker_idx=speaker_idx,
