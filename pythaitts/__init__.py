@@ -8,10 +8,10 @@ from pythaitts.preprocess import preprocess_text, num_to_thai, expand_maiyamok
 
 
 class TTS:
-    def __init__(self, pretrained="lunarlist_onnx", mode="last_checkpoint", version="1.0", device:str="cpu") -> None:
+    def __init__(self, pretrained="lunarlist_onnx", mode="last_checkpoint", version="1.0", device:str="cpu", **kwargs) -> None:
         """
-        :param str pretrained: TTS pretrained (lunarlist_onnx, khanomtan, lunarlist, vachana)
-        :param str mode: pretrained mode (lunarlist_onnx and vachana don't support)
+        :param str pretrained: TTS pretrained (lunarlist_onnx, khanomtan, lunarlist, vachana, fastthaig2p)
+        :param str mode: pretrained mode (lunarlist_onnx, vachana, and fastthaig2p don't support)
         :param str version: model version (default is 1.0 or 1.1)
         :param str device: device for running model. (lunarlist_onnx and vachana support CPU only.)
 
@@ -32,14 +32,15 @@ class TTS:
         For vachana tts model, \
         You can see more about vachana tts at `https://github.com/VYNCX/VachanaTTS2 <https://github.com/VYNCX/VachanaTTS2>`_
 
-        
+        For fastthaig2p tts model, \
+        You can see more about fastthaig2p at `https://github.com/awslabs/FastThaiG2P <https://github.com/awslabs/FastThaiG2P>`_
         """
         self.pretrained = pretrained
         self.mode = mode
         self.device = device
-        self.load_pretrained(version=version)
+        self.load_pretrained(version=version, **kwargs)
 
-    def load_pretrained(self,version):
+    def load_pretrained(self, version="1.0", **kwargs):
         """
         Load pretrained
         """
@@ -55,21 +56,25 @@ class TTS:
         elif self.pretrained == "vachana":
             from pythaitts.pretrained.vachana_tts import VachanaTTS
             self.model = VachanaTTS()
+        elif self.pretrained in ("fastthaig2p", "FastThaiG2P"):
+            from pythaitts.pretrained.fastthaig2p import FastThaiG2P
+            self.model = FastThaiG2P(device=self.device, **kwargs)
         else:
             raise NotImplementedError(
                 "PyThaiTTS doesn't support %s pretrained." % self.pretrained
             )
 
-    def tts(self, text: str, speaker_idx: str = "Linda", language_idx: str = "th-th", return_type: str = "file", filename: str = None, preprocess: bool = True):
+    def tts(self, text: str, speaker_idx: str = "Linda", language_idx: str = "th-th", return_type: str = "file", filename: str = None, preprocess: bool = True, **kwargs):
         """
         speech synthesis
 
         :param str text: text
-        :param str speaker_idx: speaker (default is Linda for khanomtan, th_f_1 for vachana)
+        :param str speaker_idx: speaker (default is Linda for khanomtan, th_f_1 for vachana, thai_som for fastthaig2p)
         :param str language_idx: language (default is th-th)
         :param str return_type: return type (default is file)
         :param str filename: path filename for save wav file if return_type is file.
         :param bool preprocess: whether to preprocess text (convert numbers to Thai text and expand ๆ). Default is True.
+        :param kwargs: Additional parameters passed to the underlying model.
         """
         # Preprocess text if requested
         if preprocess:
@@ -79,7 +84,11 @@ class TTS:
         if self.pretrained == "lunarlist" or self.pretrained == "lunarlist_onnx":
             return self.model(text=text,return_type=return_type,filename=filename)
         elif self.pretrained == "vachana":
-            return self.model(text=text,speaker_idx=speaker_idx,return_type=return_type,filename=filename)
+            return self.model(text=text,speaker_idx=speaker_idx,return_type=return_type,filename=filename, **kwargs)
+        elif self.pretrained in ("fastthaig2p", "FastThaiG2P"):
+            if speaker_idx in ("Linda", None):
+                speaker_idx = "thai_som"
+            return self.model(text=text,speaker_idx=speaker_idx,return_type=return_type,filename=filename, **kwargs)
         return self.model(
             text=text,
             speaker_idx=speaker_idx,

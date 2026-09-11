@@ -3,3 +3,4 @@ numpy>=1.22
 onnxruntime
 vachanatts
 soundfile
+pythainlp

@@ -41,6 +41,10 @@ file = tts.tts("สวัสดีครับ", speaker_idx="th_f_1", filename=
 tts = TTS(pretrained="lunarlist_onnx")
 file = tts.tts("ภาษาไทย ง่าย มาก", filename="output.wav")
 
+# Use FastThaiG2P (default voice: thai_som)
+tts = TTS(pretrained="fastthaig2p")
+file = tts.tts("สวัสดีครับ", speaker_idx="thai_som", filename="output.wav")
+
 # Use KhanomTan
 tts = TTS(pretrained="khanomtan")
 file = tts.tts("ภาษาไทย", speaker_idx="Linda", filename="output.wav")
