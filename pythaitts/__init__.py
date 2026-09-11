@@ -2,7 +2,7 @@
 """
 PyThaiTTS
 """
-__version__ = "0.4.2"
+__version__ = "0.5.0"
 
 from pythaitts.preprocess import preprocess_text, num_to_thai, expand_maiyamok
 
