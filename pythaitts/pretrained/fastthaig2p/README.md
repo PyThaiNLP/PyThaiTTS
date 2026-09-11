@@ -1,5 +1,8 @@
-"""Locate runtime data in both layouts: installed wheel (fastthaig2p/data,
-via the force-include in pyproject.toml) and repo checkout (../data).
+# FastThaiG2P
+
+GitHub: [https://github.com/awslabs/FastThaiG2P](https://github.com/awslabs/FastThaiG2P)
+
+Report: [https://arxiv.org/abs/2608.12814](https://arxiv.org/abs/2608.12814)
 
 ## License
 
@@ -16,15 +19,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-
-from pathlib import Path
-
-_PKG = Path(__file__).parent
-
-
-def data_path(*parts: str) -> Path:
-    installed = _PKG / "data" / Path(*parts)
-    if installed.exists():
-        return installed
-    return _PKG.parent / "data" / Path(*parts)
