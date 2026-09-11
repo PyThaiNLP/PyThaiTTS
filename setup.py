@@ -17,6 +17,10 @@ setup(
     author_email="wannaphong@yahoo.com",
     url="https://github.com/pythainlp/pythaitts",
     packages=find_packages(),
+    package_data={
+        "pythaitts.pretrained.fastthaig2p": ["data/*", "data/fallback/*"],
+    },
+    include_package_data=True,
     python_requires=">=3.6",
     install_requires=requirements,
     license="Apache Software License 2.0",
