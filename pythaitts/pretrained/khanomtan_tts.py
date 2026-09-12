@@ -11,7 +11,6 @@ KhanomTan TTS v1.1: `https://github.com/wannaphong/KhanomTan-TTS-v1.1 <https://g
 This model uses the TTS package from: `https://github.com/idiap/coqui-ai-TTS <https://github.com/idiap/coqui-ai-TTS>`_
 """
 import tempfile
-from TTS.utils.synthesizer import Synthesizer
 from huggingface_hub import hf_hub_download
 
 
@@ -46,7 +45,13 @@ class KhanomTan:
         """
         mode: The model mode (best_mode or last_checkpoint)
         """
-        if mode=="best_model":
+        try:
+            from TTS.utils.synthesizer import Synthesizer
+        except ImportError:
+            raise ImportError(
+                "You must install coqui-tts before using this model: pip install coqui-tts"
+            )
+        if mode == "best_model":
             self.best_model_path = hf_hub_download(repo_id="wannaphong/khanomtan-tts-v{0}".format(self.version),filename=self.best_model_path_name,force_filename="best_model-v{0}.pth".format(self.version))
             self.synthesizer = Synthesizer(
                 tts_checkpoint=self.best_model_path,
