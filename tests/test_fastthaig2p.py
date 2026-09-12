@@ -66,6 +66,17 @@ class TestFastThaiG2PIntegration(unittest.TestCase):
         mock_fastthaig2p_cls.assert_called_once_with(device="cpu")
 
     @patch('pythaitts.pretrained.fastthaig2p.FastThaiG2P')
+    def test_fastthaig2p_default_initialization(self, mock_fastthaig2p_cls):
+        """Test that FastThaiG2P is initialized by default when no pretrained is specified"""
+        mock_instance = Mock()
+        mock_fastthaig2p_cls.return_value = mock_instance
+
+        tts = TTS()
+        self.assertIsNotNone(tts.model)
+        self.assertEqual(tts.pretrained, "fastthaig2p")
+        mock_fastthaig2p_cls.assert_called_once_with(device="cpu")
+
+    @patch('pythaitts.pretrained.fastthaig2p.FastThaiG2P')
     def test_fastthaig2p_case_insensitive_name(self, mock_fastthaig2p_cls):
         mock_instance = Mock()
         mock_fastthaig2p_cls.return_value = mock_instance

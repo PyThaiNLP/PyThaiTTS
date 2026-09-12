@@ -1,7 +1,7 @@
 # PyThaiTTS
 Open Source Thai Text-to-speech library in Python
 
-[Google Colab](https://colab.research.google.com/github/PyThaiNLP/PyThaiTTS/blob/dev/notebook/use_lunarlist_model.ipynb) | [Docs](https://pythainlp.github.io/PyThaiTTS/) | [Notebooks](https://github.com/PyThaiNLP/PyThaiTTS/tree/dev/notebook)
+[Google Colab](https://colab.research.google.com/github/PyThaiNLP/PyThaiTTS/blob/main/notebook/use_fastthaig2p.ipynb) | [Docs](https://pythainlp.github.io/PyThaiTTS/) | [Notebooks](https://github.com/PyThaiNLP/PyThaiTTS/tree/main/notebook)
 <a href="https://pepy.tech/project/pythaitts"><img alt="Download" src="https://pepy.tech/badge/pythaitts/month"/></a>
 
 License: [Apache-2.0 License](https://github.com/PyThaiNLP/pythaitts/blob/main/LICENSE)
@@ -33,20 +33,20 @@ PyThaiTTS supports multiple TTS models. You can specify which model to use:
 ```python
 from pythaitts import TTS
 
-# Use VachanaTTS (default voices: th_f_1, th_m_1, th_f_2, th_m_2)
-# Sample Rate is 22050 Hz
-tts = TTS(pretrained="vachana")
-file = tts.tts("สวัสดีครับ", speaker_idx="th_f_1", filename="output.wav")
+# Use FastThaiG2P (default) (default voice: thai_som)
+# FastThaiG2P Sample Rate is 24000 Hz
+tts = TTS(pretrained="fastthaig2p")
+file = tts.tts("สวัสดีครับ", speaker_idx="thai_som", filename="output.wav")
 
-# Use Lunarlist ONNX (default)
+# Use Lunarlist ONNX
 # Sample Rate is 22050 Hz
 tts = TTS(pretrained="lunarlist_onnx")
 file = tts.tts("ภาษาไทย ง่าย มาก", filename="output.wav")
 
-# Use FastThaiG2P (default voice: thai_som)
-# FastThaiG2P Sample Rate is 24000 Hz
-tts = TTS(pretrained="fastthaig2p")
-file = tts.tts("สวัสดีครับ", speaker_idx="thai_som", filename="output.wav")
+# Use VachanaTTS (default voices: th_f_1, th_m_1, th_f_2, th_m_2)
+# Sample Rate is 22050 Hz
+tts = TTS(pretrained="vachana")
+file = tts.tts("สวัสดีครับ", speaker_idx="th_f_1", filename="output.wav")
 
 # Use KhanomTan
 # Sample Rate is 16000 Hz

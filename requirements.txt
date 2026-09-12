@@ -1,6 +1,5 @@
 huggingface_hub
 numpy>=1.22
 onnxruntime
-vachanatts
 soundfile
 pythainlp
