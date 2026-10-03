@@ -125,14 +125,32 @@ def chunk_text(
 
         text = preprocess_text(str(text))
 
+    sentences = []
     try:
         from pythainlp.tokenize import sent_tokenize
 
-        sentences = sent_tokenize(text, engine="crfcut")
+        try:
+            sentences = sent_tokenize(text, engine="crfcut")
+        except Exception:
+            sentences = sent_tokenize(text, engine="whitespace+newline")
     except Exception:
+        pass
+
+    if not sentences or len(sentences) <= 1:
+        if " " in text or "\n" in text:
+            try:
+                from pythainlp.tokenize import sent_tokenize
+
+                ws_sents = sent_tokenize(text, engine="whitespace+newline")
+                if len(ws_sents) > 1:
+                    sentences = ws_sents
+            except Exception:
+                pass
+
+    if not sentences:
         sentences = [s.strip() for s in text.splitlines() if s.strip()]
-        if not sentences:
-            sentences = [text]
+    if not sentences:
+        sentences = [text]
 
     if g2p_converter is None:
         from pythaitts.pretrained.fastthaig2p import G2P, ipa_to_kokoro
@@ -250,7 +268,18 @@ def stream_text_to_chunks(
             try:
                 sents = sent_tokenize(buffer, engine="crfcut")
             except Exception:
-                sents = [buffer]
+                try:
+                    sents = sent_tokenize(buffer, engine="whitespace+newline")
+                except Exception:
+                    sents = [buffer]
+
+            if len(sents) <= 1 and (" " in buffer or "\n" in buffer):
+                try:
+                    ws_sents = sent_tokenize(buffer, engine="whitespace+newline")
+                    if len(ws_sents) > 1:
+                        sents = ws_sents
+                except Exception:
+                    pass
 
         if len(sents) > 1:
             for s in sents[:-1]:

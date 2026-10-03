@@ -34,6 +34,14 @@ class TestRealtimeChunking(unittest.TestCase):
         chunks = chunk_text(text)
         self.assertTrue(len(chunks) >= 2)
 
+    def test_chunk_text_without_pycrfsuite(self):
+        import sys
+        # Simulate environment where python-crfsuite is not installed
+        with patch.dict(sys.modules, {"pycrfsuite": None}):
+            text = "สวัสดีครับ วันนี้อากาศดีมาก เราไปเที่ยวกันเถอะ"
+            chunks = chunk_text(text)
+            self.assertTrue(len(chunks) >= 2)
+
     def test_chunk_text_preprocessing(self):
         text = "มี 5 คนๆ"
         chunks_preprocessed = chunk_text(text, preprocess=True)
