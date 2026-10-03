@@ -32,7 +32,7 @@ import json
 import os
 import wave
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union, Iterable, Iterator
 
 import numpy as np
 
@@ -276,6 +276,84 @@ class TTS:
 
             self.synthesize(text, filename)
             return str(filename)
+
+    def stream(
+        self,
+        text: Union[str, Iterable[str]],
+        speaker_idx: str = "thai_som",
+        return_type: str = "waveform",
+        play: bool = False,
+        preprocess: bool = True,
+        max_phonemes: int = 400,
+        **kwargs,
+    ):
+        """Stream Thai speech generation chunk by chunk in real-time.
+
+        :param Union[str, Iterable[str]] text: Input text or stream of text tokens (e.g. from LLM)
+        :param str speaker_idx: Voice to use (default: "thai_som" or path to custom voicepack)
+        :param str return_type: Return format ("waveform", "bytes", "raw", "file")
+        :param bool play: Whether to play audio chunks in real-time to speakers
+        :param bool preprocess: Whether to preprocess text (numbers to words, ๆ)
+        :param int max_phonemes: Maximum phonemes per synthesized chunk (default: 400)
+        :param kwargs: Additional parameters (e.g., speed)
+        :yield: Audio chunk (np.ndarray float32 waveform, int16 bytes, or wav file path)
+        """
+        if speaker_idx in ("Linda", None):
+            speaker_idx = "thai_som"
+
+        if speaker_idx not in self.SUPPORTED_VOICES and not os.path.exists(str(speaker_idx)):
+            raise ValueError(
+                f"Unsupported voice '{speaker_idx}'. Supported voices are: {', '.join(self.SUPPORTED_VOICES)}"
+            )
+
+        orig_speed = self.speed
+        if "speed" in kwargs:
+            self.speed = kwargs["speed"]
+
+        from pythaitts.realtime import _AudioPlayer, stream_text_to_chunks
+
+        player = _AudioPlayer(sample_rate=self.sample_rate) if play else None
+
+        try:
+            chunks = stream_text_to_chunks(
+                text,
+                max_phonemes=max_phonemes,
+                preprocess=preprocess,
+                g2p_converter=self._text_to_phonemes,
+            )
+            for chunk in chunks:
+                audio = self.generate(chunk)
+                if len(audio) == 0:
+                    continue
+
+                if player is not None:
+                    player.play(audio)
+
+                if return_type == "waveform":
+                    yield audio
+                elif return_type in ("bytes", "raw"):
+                    yield (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16).tobytes()
+                elif return_type == "file":
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as fp:
+                        temp_name = fp.name
+                    audio_int16 = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
+                    with wave.open(temp_name, "wb") as wf:
+                        wf.setnchannels(1)
+                        wf.setsampwidth(2)
+                        wf.setframerate(self.sample_rate)
+                        wf.writeframes(audio_int16.tobytes())
+                    yield temp_name
+                else:
+                    raise ValueError(
+                        f"Unsupported return_type '{return_type}'. Choose 'waveform', 'bytes', or 'file'."
+                    )
+        finally:
+            if player is not None:
+                player.close()
+            self.speed = orig_speed
+
+    tts_stream = stream
 
 
 FastThaiG2P = TTS

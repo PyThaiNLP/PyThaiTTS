@@ -4,7 +4,17 @@ PyThaiTTS
 """
 __version__ = "0.6.0"
 
+from typing import Union, Iterable, Iterator
+
 from pythaitts.preprocess import preprocess_text, num_to_thai, expand_maiyamok
+from pythaitts.realtime import (
+    RealtimeTTS,
+    FastThaiG2PEngine,
+    PyThaiTTSEngine,
+    RealtimeTTSEngine,
+    chunk_text,
+    stream_text_to_chunks,
+)
 
 
 class TTS:
@@ -100,3 +110,70 @@ class TTS:
             return_type=return_type,
             filename=filename
         )
+
+    def stream(
+        self,
+        text: Union[str, Iterable[str]],
+        speaker_idx: str = "thai_som",
+        return_type: str = "waveform",
+        play: bool = False,
+        preprocess: bool = True,
+        max_phonemes: int = 400,
+        **kwargs,
+    ):
+        """
+        Stream speech synthesis in real-time.
+
+        :param Union[str, Iterable[str]] text: Input text or stream of text tokens (e.g. from LLM)
+        :param str speaker_idx: Voice to use (default: "thai_som" for fastthaig2p)
+        :param str return_type: Return format ("waveform", "bytes", "raw", "file")
+        :param bool play: Whether to play audio chunks in real-time to speakers
+        :param bool preprocess: Whether to preprocess text (numbers to words, ๆ)
+        :param int max_phonemes: Maximum phonemes per synthesized chunk
+        :param kwargs: Additional parameters passed to the model
+        :return: Generator yielding audio chunks
+        """
+        if self.pretrained in ("fastthaig2p", "FastThaiG2P"):
+            if speaker_idx in ("Linda", None):
+                speaker_idx = "thai_som"
+            return self.model.stream(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                play=play,
+                preprocess=preprocess,
+                max_phonemes=max_phonemes,
+                **kwargs,
+            )
+        else:
+            from pythaitts.realtime import stream_text_to_chunks
+
+            def _gen():
+                for chunk in stream_text_to_chunks(
+                    text, max_phonemes=max_phonemes, preprocess=preprocess
+                ):
+                    yield self.tts(
+                        text=chunk,
+                        speaker_idx=speaker_idx,
+                        return_type=return_type,
+                        preprocess=False,
+                        **kwargs,
+                    )
+
+            return _gen()
+
+    tts_stream = stream
+
+
+__all__ = [
+    "TTS",
+    "RealtimeTTS",
+    "FastThaiG2PEngine",
+    "PyThaiTTSEngine",
+    "RealtimeTTSEngine",
+    "preprocess_text",
+    "num_to_thai",
+    "expand_maiyamok",
+    "chunk_text",
+    "stream_text_to_chunks",
+]

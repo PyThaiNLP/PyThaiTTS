@@ -26,6 +26,7 @@ setup(
     extras_require={
         "vachanatts": ["vachanatts"],
         "vachana": ["vachanatts"],
+        "realtime": ["RealtimeTTS"],
     },
     license="Apache Software License 2.0",
     zip_safe=False,
