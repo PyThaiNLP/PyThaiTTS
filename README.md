@@ -54,6 +54,67 @@ tts = TTS(pretrained="khanomtan")
 file = tts.tts("ภาษาไทย", speaker_idx="Linda", filename="output.wav")
 ```
 
+### Real-time / Streaming TTS (FastThaiG2P)
+
+PyThaiTTS supports low-latency, real-time streaming speech synthesis with FastThaiG2P, making it ideal for conversational voice agents and LLM streaming:
+
+#### 1. Streaming Audio from Text
+
+Synthesize chunk-by-chunk in real time:
+
+```python
+from pythaitts import TTS
+
+tts = TTS(pretrained="fastthaig2p")
+
+# Stream audio chunks as 24kHz float32 NumPy arrays
+for audio_chunk in tts.stream("สวัสดีครับ ยินดีต้อนรับสู่ระบบเรียลไทม์ทีทีเอส"):
+    print(f"Audio chunk shape: {audio_chunk.shape}")
+
+# Stream raw 16-bit PCM bytes (for WebSockets or PyAudio)
+for pcm_bytes in tts.stream("สวัสดีครับ", return_type="bytes"):
+    # send over websocket or write to audio stream
+    pass
+```
+
+#### 2. Streaming from an LLM Token Stream
+
+Feed tokens directly from an LLM or generator into `tts.stream()`:
+
+```python
+from pythaitts import TTS
+
+tts = TTS()
+
+def token_stream():
+    tokens = ["สวัสดี", "ครับ", " ", "นี่", "คือ", "การ", "สตรีม", "มิ่ง"]
+    for tok in tokens:
+        yield tok
+
+for audio_chunk in tts.stream(token_stream()):
+    # Process or play chunk with low latency
+    pass
+```
+
+#### 3. Integration with the RealtimeTTS Library
+
+You can use FastThaiG2P as an engine with [KoljaB/RealtimeTTS](https://github.com/KoljaB/RealtimeTTS):
+
+```sh
+pip install pythaitts[realtime]
+```
+
+```python
+from RealtimeTTS import TextToAudioStream
+from pythaitts.realtime import FastThaiG2PEngine
+
+engine = FastThaiG2PEngine()
+stream = TextToAudioStream(engine)
+stream.feed("สวัสดีครับ วันนี้อากาศดีมาก")
+stream.play()
+```
+
+
 ### Text Preprocessing
 
 PyThaiTTS includes automatic text preprocessing to improve TTS quality:

@@ -23,7 +23,18 @@ from .kokoro import ipa_to_kokoro
 from .normalizer import normalize
 from .tokenizer import Tokenizer
 
-__all__ = ["G2P", "Tokenizer", "normalize", "ipa_to_kokoro", "TTS", "FastThaiG2P"]
+__all__ = [
+    "G2P",
+    "Tokenizer",
+    "normalize",
+    "ipa_to_kokoro",
+    "TTS",
+    "FastThaiG2P",
+    "FastThaiG2PEngine",
+    "FastThaiG2PVoice",
+    "chunk_text",
+    "stream_text_to_chunks",
+]
 
 
 def __getattr__(name):
@@ -31,5 +42,14 @@ def __getattr__(name):
         from .tts import TTS, FastThaiG2P
 
         return FastThaiG2P if name == "FastThaiG2P" else TTS
+    if name in ("FastThaiG2PEngine", "FastThaiG2PVoice", "chunk_text", "stream_text_to_chunks"):
+        from pythaitts.realtime import (
+            FastThaiG2PEngine,
+            FastThaiG2PVoice,
+            chunk_text,
+            stream_text_to_chunks,
+        )
+
+        return locals()[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
