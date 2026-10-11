@@ -18,9 +18,11 @@ limitations under the License.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from ._data import data_path
+from .en_g2p import en_g2p
 from .fallback import fallback_g2p
 from .normalizer import normalize
 from .tokenizer import Tokenizer
@@ -28,21 +30,25 @@ from .tokenizer import Tokenizer
 DEFAULT_DICT_PATH = data_path("dict.txt")
 DEFAULT_IPA_PATH = data_path("ipa.json")
 
+_EN_TOKEN_RE = re.compile(r"^[A-Za-z']+$")
+
 
 class G2P:
     def __init__(
         self,
         dict_path: Path | str = DEFAULT_DICT_PATH,
         ipa_path: Path | str = DEFAULT_IPA_PATH,
+        use_espeak: bool = False,
     ):
         self._tokenizer = Tokenizer(dict_path)
         ipa_path = Path(ipa_path)
         self._ipa = json.loads(ipa_path.read_text(encoding="utf-8"))
+        self.use_espeak = use_espeak
 
     def convert(self, text: str) -> str:
-        """Convert Thai text to IPA phonemes.
+        """Convert Thai (and code-switched English) text to IPA phonemes.
 
-        Pipeline: normalize → tokenize → dict lookup → fallback G2P → join.
+        Pipeline: normalize → tokenize → dict lookup → English G2P / fallback G2P → join.
         """
         normalized = normalize(text)
         tokens = self._tokenizer.tokenize(normalized)
@@ -53,6 +59,8 @@ class G2P:
             ipa = self._ipa.get(token)
             if ipa:
                 phonemes.append(ipa)
+            elif _EN_TOKEN_RE.match(token):
+                phonemes.append(en_g2p(token, use_espeak=self.use_espeak))
             else:
                 phonemes.append(fallback_g2p(token))
         return " ".join(phonemes)

@@ -446,15 +446,139 @@ def _expand_abbreviations(text: str) -> str:
     return _ABBREV_PATTERN.sub(lambda m: ABBREVIATIONS[m.group(0)], text)
 
 
-def _spell_latin_residue(text: str) -> str:
-    """Spell out any remaining Latin letters Thai-style (A → เอ, B → บี).
+# Acronyms / initialisms that are always spelled letter-by-letter in Thai
+_SPELL_OUT_ACRONYMS = {
+    "aa", "ai", "ais", "apk", "api", "arl", "asr", "atm", "aws",
+    "bbc", "bbl", "bmta", "bts",
+    "ceo", "cfo", "cia", "cli", "cnn", "coo", "cpu", "css", "cto",
+    "dna", "dns", "dtac", "dvd",
+    "eu",
+    "fbi", "ftp",
+    "gcp", "gdp", "gps", "gpu", "gui",
+    "hdd", "hr", "html", "http", "https",
+    "icu", "id", "ide", "ios", "iot", "ip", "it",
+    "kbank", "ktb",
+    "lan", "lcd", "led", "llm",
+    "mrt",
+    "nba", "nlp", "nft",
+    "ocr", "opd", "os",
+    "pc", "pdf", "pr",
+    "qa", "qr",
+    "rna", "rom",
+    "scb", "sdk", "sim", "sms", "sql", "ssd", "ssh",
+    "tot", "ttb", "tts", "tv",
+    "uae", "ui", "uk", "un", "url", "usa", "usb", "ux",
+    "vip", "vpn", "vr",
+    "wan", "who", "www",
+}
 
-    Runs last, so known words/abbreviations have already been expanded;
-    what's left is codes like "AA", "SAVE", or plan names like "แผน A".
+# Common short 2-3 letter English words that are read as words even if written in ALL CAPS
+_SHORT_ENGLISH_WORDS = {
+    "all", "and", "any", "are", "art", "ask", "add", "act", "age", "ago", "air", "arm",
+    "bad", "bag", "ban", "bar", "bat", "bay", "bed", "bee", "bet", "big", "bit", "box", "boy", "bug", "bus", "but", "buy",
+    "can", "car", "cat", "cup", "cut", "cry",
+    "dad", "day", "die", "dog", "dry", "due",
+    "ear", "eat", "egg", "end", "era", "eye",
+    "fan", "far", "fat", "fee", "few", "fit", "fix", "fly", "for", "fun",
+    "gap", "gas", "get", "god", "got", "gun", "guy", "gym",
+    "hat", "her", "hey", "him", "his", "hit", "hot", "how", "ice", "ill", "ink", "inn", "its",
+    "jam", "jet", "job", "joy",
+    "key", "kid", "kit",
+    "lab", "law", "lay", "leg", "let", "lie", "lip", "log", "lot", "low",
+    "mad", "man", "map", "max", "may", "men", "mix", "mom", "mud",
+    "net", "new", "no", "nor", "not", "now", "nut",
+    "odd", "off", "oil", "old", "one", "our", "out", "owe", "own",
+    "pan", "pay", "pen", "pet", "pie", "pig", "pop", "pot", "pro", "put",
+    "raw", "red", "rid", "row", "run",
+    "sad", "saw", "say", "sea", "see", "set", "she", "shy", "sin", "sir", "sit", "six", "sky", "son", "sum", "sun",
+    "tag", "tap", "tax", "tea", "ten", "the", "tie", "tip", "toe", "top", "toy", "try", "two",
+    "use", "van", "via", "war", "was", "way", "web", "wet", "who", "why", "win", "won", "yes", "yet", "you", "zoo",
+    "go", "do", "so", "to", "in", "on", "at", "by", "of", "or", "up", "if", "my", "me", "we", "he", "be", "hi", "ok",
+}
+
+_EN_CONTRACTIONS = {
+    "can't": "cannot",
+    "won't": "will not",
+    "shan't": "shall not",
+    "n't": " not",
+    "'re": " are",
+    "'ve": " have",
+    "'ll": " will",
+    "'m": " am",
+    "let's": "let us",
+    "it's": "it is",
+    "that's": "that is",
+    "what's": "what is",
+    "where's": "where is",
+    "there's": "there is",
+    "here's": "here is",
+    "who's": "who is",
+    "how's": "how is",
+}
+
+_EN_CONTRACTION_PATTERN = re.compile(
+    r"\b(can't|won't|shan't|let's|it's|that's|what's|where's|there's|here's|who's|how's)\b"
+    r"|(?<=[A-Za-z])(n't|'re|'ve|'ll|'m)\b",
+    re.IGNORECASE,
+)
+
+
+def _expand_en_contractions(text: str) -> str:
+    def _repl(m: re.Match) -> str:
+        key = m.group(0).lower()
+        return _EN_CONTRACTIONS.get(key, m.group(0))
+
+    text = _EN_CONTRACTION_PATTERN.sub(_repl, text)
+    # Possessive 's -> s (e.g. John's -> Johns)
+    text = re.sub(r"(?<=[A-Za-z])'s\b", "s", text, flags=re.IGNORECASE)
+    return text
+
+
+def _should_spell_latin_token(word: str, full_text: str, start: int, end: int) -> bool:
+    """Return True if a Latin token should be spelled out letter-by-letter."""
+    lower = word.lower()
+
+    # 1. Single letter (e.g., "แผน A", "เกรด B", "กลุ่ม C")
+    if len(word) == 1:
+        # Keep English pronoun "I" or article "a" when adjacent to another English word
+        if word in ("I", "a", "A"):
+            before = full_text[:start].rstrip()
+            after = full_text[end:].lstrip()
+            has_en_before = bool(before and before[-1].isalpha() and before[-1].isascii())
+            has_en_after = bool(after and after[0].isalpha() and after[0].isascii())
+            if word in ("I", "a") and (has_en_before or has_en_after):
+                return False
+            if word == "A" and has_en_after:
+                return False
+        return True
+
+    # 2. Words with no English vowel letters (e.g., "SMS", "PDF", "LLM", "TTS", "BTS")
+    if not any(c in "aeiouy" for c in lower):
+        return True
+
+    # 3. Known initialisms/acronyms when written in uppercase (or case-insensitive for non-words)
+    if lower in _SPELL_OUT_ACRONYMS:
+        if word.isupper() or lower not in _SHORT_ENGLISH_WORDS:
+            return True
+
+    # 4. Short all-caps codes (2-3 letters like "AA", "AB", "UFA") not in common short words
+    if word.isupper() and len(word) <= 3 and lower not in _SHORT_ENGLISH_WORDS:
+        return True
+
+    return False
+
+
+def _spell_latin_residue(text: str, spell_all: bool = False) -> str:
+    """Spell out Latin acronyms/codes Thai-style (A → เอ, B → บี) while
+    preserving pronounceable English words for English-to-Thai-IPA G2P.
     """
-    return _LATIN_RESIDUE_PATTERN.sub(
-        lambda m: "".join(LETTER_TO_THAI[c.upper()] for c in m.group(0)), text
-    )
+    def _repl(m: re.Match) -> str:
+        word = m.group(0)
+        if spell_all or _should_spell_latin_token(word, text, m.start(), m.end()):
+            return "".join(LETTER_TO_THAI[c.upper()] for c in word)
+        return word
+
+    return _LATIN_RESIDUE_PATTERN.sub(_repl, text)
 
 
 def _expand_symbols(text: str) -> str:
@@ -481,12 +605,19 @@ def _thai_numerals_to_arabic(text: str) -> str:
     return text
 
 
-def normalize(text: str) -> str:
+def normalize(text: str, spell_latin: bool = False) -> str:
     """Normalize text for TTS: convert numbers, abbreviations, and special
-    characters to speakable Thai words."""
+    characters to speakable Thai words.
+
+    :param str text: Input text
+    :param bool spell_latin: If True, spell all remaining Latin words letter-by-letter.
+        If False (default), only acronyms and single letters are spelled out,
+        leaving English words intact for English-to-Thai-IPA G2P.
+    """
     text = _expand_maiyamok(text)
     text = _thai_numerals_to_arabic(text)
     text = _EMAIL_PATTERN.sub(_email_to_thai, text)
+    text = _expand_en_contractions(text)
     text = _expand_english_abbrevs(text)
     text = _expand_units(text)
     text = _expand_symbols(text)
@@ -496,7 +627,7 @@ def normalize(text: str) -> str:
     text = _COMMA_NUMBER_PATTERN.sub(_strip_commas_and_convert, text)
     text = _NUMBER_PATTERN.sub(_number_or_id_to_thai, text)
     text = _expand_abbreviations(text)
-    text = _spell_latin_residue(text)
+    text = _spell_latin_residue(text, spell_all=spell_latin)
     # leftover hyphens (ชื่อ-นามสกุล) — connectors, not speakable tokens
     text = text.replace("-", " ")
     return text

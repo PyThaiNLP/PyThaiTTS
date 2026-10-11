@@ -7,12 +7,12 @@ import unittest
 from unittest.mock import Mock, patch
 import numpy as np
 
-from pythaitts import TTS
+from pythaitts import TTS, EnglishG2P, en_g2p, en_to_ipa, en_ipa_to_thai_ipa
 from pythaitts.pretrained.fastthaig2p import G2P, Tokenizer, normalize, ipa_to_kokoro, FastThaiG2P
 
 
 class TestFastThaiG2PComponents(unittest.TestCase):
-    """Test individual FastThaiG2P components (Normalizer, Kokoro, Tokenizer, G2P)"""
+    """Test individual FastThaiG2P components (Normalizer, Kokoro, Tokenizer, G2P, EnglishG2P)"""
 
     def test_normalizer_plain_text(self):
         self.assertEqual(normalize("สวัสดีครับ"), "สวัสดีครับ")
@@ -29,6 +29,17 @@ class TestFastThaiG2PComponents(unittest.TestCase):
     def test_normalizer_abbreviation(self):
         self.assertIn("มกราคม", normalize("ม.ค."))
         self.assertIn("ด็อกเตอร์", normalize("ดร."))
+
+    def test_normalizer_english_acronyms_vs_words(self):
+        # Single letters and initialisms should be spelled out in Thai
+        self.assertEqual(normalize("แผน A"), "แผน เอ")
+        self.assertEqual(normalize("ส่ง SMS"), "ส่ง เอสเอ็มเอส")
+        self.assertEqual(normalize("เปิด URL"), "เปิด ยูอาร์แอล")
+        # Pronounceable English words should be kept for English G2P
+        self.assertIn("Hello", normalize("สวัสดี Hello"))
+        self.assertIn("meeting", normalize("มี meeting วันนี้"))
+        # Contractions should expand
+        self.assertIn("do not", normalize("I don't know"))
 
     def test_kokoro_ipa_mapping(self):
         result = ipa_to_kokoro("/sa˨˩.wat̚˨˩.diː˧/ /kʰrap̚˦˥/")
@@ -50,6 +61,33 @@ class TestFastThaiG2PComponents(unittest.TestCase):
         result = g2p.convert("กินข้าว")
         self.assertIn("kin˧", result)
         self.assertIn("kʰaːw˥˩", result)
+
+    def test_en_to_ipa_and_en_ipa_to_thai_ipa(self):
+        # Dictionary word -> English IPA -> Thai IPA
+        self.assertEqual(en_to_ipa("computer"), "/kəmˈpjuː.tɚ/")
+        self.assertEqual(en_ipa_to_thai_ipa("/kəmˈpjuː.tɚ/"), "/kʰɔm˧.pʰiw˧.tɤː˥˩/")
+        self.assertEqual(en_g2p("computer"), "/kʰɔm˧.pʰiw˧.tɤː˥˩/")
+
+        # S-cluster epenthesis (stream -> sa˨˩.triːm...)
+        self.assertTrue(en_g2p("streaming").startswith("/sa˨˩.triː"))
+
+        # EnglishG2P class interface
+        eng = EnglishG2P()
+        self.assertEqual(eng("project"), "/proː˧.t͡ɕek̚˨˩/")
+        self.assertEqual(eng.to_thai_ipa("/həˈloʊ/"), "/heː˧.loː˧/")
+
+        # OOV rule-based fallback
+        oov_ipa = en_g2p("customizable")
+        self.assertTrue(oov_ipa.startswith("/") and oov_ipa.endswith("/"))
+
+    def test_g2p_thai_english_code_switching(self):
+        g2p = G2P()
+        result = g2p.convert("วันนี้เรามี meeting เรื่อง project ใหม่")
+        self.assertIn("/miː˧.tiŋ˥˩/", result)
+        self.assertIn("/proː˧.t͡ɕek̚˨˩/", result)
+        kokoro_str = ipa_to_kokoro(result)
+        self.assertIn("miː→.tiŋ↘", kokoro_str)
+        self.assertIn("proː→.ʨek↓", kokoro_str)
 
 
 class TestFastThaiG2PIntegration(unittest.TestCase):

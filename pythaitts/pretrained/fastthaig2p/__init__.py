@@ -18,6 +18,7 @@ limitations under the License.
 """
 from __future__ import annotations
 
+from .en_g2p import EnglishG2P, en_g2p, en_ipa_to_thai_ipa, en_to_ipa
 from .g2p import G2P
 from .kokoro import ipa_to_kokoro
 from .normalizer import normalize
@@ -25,6 +26,10 @@ from .tokenizer import Tokenizer
 
 __all__ = [
     "G2P",
+    "EnglishG2P",
+    "en_g2p",
+    "en_to_ipa",
+    "en_ipa_to_thai_ipa",
     "Tokenizer",
     "normalize",
     "ipa_to_kokoro",
