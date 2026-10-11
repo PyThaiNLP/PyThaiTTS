@@ -115,6 +115,33 @@ stream.play()
 ```
 
 
+### Thai-English Code-Switching (FastThaiG2P)
+
+`FastThaiG2P` automatically supports Thai-English code-switching text by converting English words into English IPA and adapting them into Thai IPA phonemes (Thai-style English pronunciation), while spelling out English acronyms and single letters in Thai (e.g., `SMS` -> `เอสเอ็มเอส`, `แผน A` -> `แผน เอ`):
+
+```python
+from pythaitts import TTS
+
+tts = TTS(pretrained="fastthaig2p")
+file = tts.tts("วันนี้เรามี meeting เรื่อง project ใหม่", filename="code_switch.wav")
+```
+
+You can also use the English-to-Thai-IPA G2P utilities directly:
+
+```python
+from pythaitts import EnglishG2P, en_g2p, en_to_ipa, en_ipa_to_thai_ipa
+
+# Convert English word -> English IPA -> Thai IPA
+print(en_to_ipa("computer"))                    # Output: /kəmˈpjuː.tɚ/
+print(en_ipa_to_thai_ipa("/kəmˈpjuː.tɚ/"))      # Output: /kʰɔm˧.pʰiw˧.tɤː˥˩/
+print(en_g2p("computer"))                       # Output: /kʰɔm˧.pʰiw˧.tɤː˥˩/
+
+# Or use the EnglishG2P class
+eng = EnglishG2P()
+print(eng("project"))                           # Output: /proː˧.t͡ɕek̚˨˩/
+```
+
+
 ### Text Preprocessing
 
 PyThaiTTS includes automatic text preprocessing to improve TTS quality:
