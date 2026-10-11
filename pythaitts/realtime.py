@@ -392,15 +392,16 @@ class FastThaiG2PEngine(BaseEngine):
     """RealtimeTTS engine implementation using FastThaiG2P + Kokoro-82M.
 
     Seamlessly integrates with KoljaB/RealtimeTTS:
-    ```python
-    from RealtimeTTS import TextToAudioStream
-    from pythaitts.realtime import FastThaiG2PEngine
 
-    engine = FastThaiG2PEngine()
-    stream = TextToAudioStream(engine)
-    stream.feed("สวัสดีครับ วันนี้อากาศดีมาก")
-    stream.play()
-    ```
+    .. code-block:: python
+
+        from RealtimeTTS import TextToAudioStream
+        from pythaitts.realtime import FastThaiG2PEngine
+
+        engine = FastThaiG2PEngine()
+        stream = TextToAudioStream(engine)
+        stream.feed("สวัสดีครับ วันนี้อากาศดีมาก")
+        stream.play()
     """
 
     SUPPORTED_VOICES = ["thai_som"]
