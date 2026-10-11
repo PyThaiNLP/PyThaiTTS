@@ -1,0 +1,735 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pythaitts.pretrained.fastthaig2p.normalizer &mdash; PyThaiTTS ac06fa8 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=bd22de34"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            PyThaiTTS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">PyThaiTTS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../../../pythaitts.html">pythaitts</a></li>
+      <li class="breadcrumb-item active">pythaitts.pretrained.fastthaig2p.normalizer</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pythaitts.pretrained.fastthaig2p.normalizer</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Text normalization for Thai TTS — converts numbers, abbreviations, and</span>
+<span class="sd">special characters to speakable Thai text before tokenization. In order:</span>
+<span class="sd">- expand maiyamok</span>
+<span class="sd">- convert thai numerals to arabic</span>
+<span class="sd">- read emails</span>
+<span class="sd">- read english abbreviations</span>
+<span class="sd">- read units</span>
+<span class="sd">- read symbols</span>
+<span class="sd">- read time patterns</span>
+<span class="sd">- read phone numbers</span>
+<span class="sd">- read alphanumeric letters together like A10G</span>
+<span class="sd">- read comma numbers</span>
+<span class="sd">- read numbers</span>
+<span class="sd">- read thai abbreviations; put here due to possible confusion with time, units</span>
+<span class="sd">- read residual latins</span>
+
+<span class="sd">## License</span>
+
+<span class="sd">Copyright 2026 Charin Polpanumas and Amazon Web Services</span>
+
+<span class="sd">Licensed under the Apache License, Version 2.0 (the "License");</span>
+<span class="sd">you may not use this file except in compliance with the License.</span>
+<span class="sd">You may obtain a copy of the License at</span>
+
+<span class="sd">    http://www.apache.org/licenses/LICENSE-2.0</span>
+
+<span class="sd">Unless required by applicable law or agreed to in writing, software</span>
+<span class="sd">distributed under the License is distributed on an "AS IS" BASIS,</span>
+<span class="sd">WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="sd">See the License for the specific language governing permissions and</span>
+<span class="sd">limitations under the License.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pythainlp.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">expand_maiyamok</span> <span class="k">as</span> <span class="n">_expand_maiyamok_pythainlp</span>
+
+<span class="c1"># pythainlp defers its dictionary load to the first call — pay that cost at</span>
+<span class="c1"># import time rather than on the first online request containing ๆ (~330ms)</span>
+<span class="n">_expand_maiyamok_pythainlp</span><span class="p">(</span><span class="s2">"ๆ"</span><span class="p">)</span>
+
+<span class="n">THAI_DIGITS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"0"</span><span class="p">:</span> <span class="s2">"ศูนย์"</span><span class="p">,</span>
+    <span class="s2">"1"</span><span class="p">:</span> <span class="s2">"หนึ่ง"</span><span class="p">,</span>
+    <span class="s2">"2"</span><span class="p">:</span> <span class="s2">"สอง"</span><span class="p">,</span>
+    <span class="s2">"3"</span><span class="p">:</span> <span class="s2">"สาม"</span><span class="p">,</span>
+    <span class="s2">"4"</span><span class="p">:</span> <span class="s2">"สี่"</span><span class="p">,</span>
+    <span class="s2">"5"</span><span class="p">:</span> <span class="s2">"ห้า"</span><span class="p">,</span>
+    <span class="s2">"6"</span><span class="p">:</span> <span class="s2">"หก"</span><span class="p">,</span>
+    <span class="s2">"7"</span><span class="p">:</span> <span class="s2">"เจ็ด"</span><span class="p">,</span>
+    <span class="s2">"8"</span><span class="p">:</span> <span class="s2">"แปด"</span><span class="p">,</span>
+    <span class="s2">"9"</span><span class="p">:</span> <span class="s2">"เก้า"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">THAI_NUMERAL_MAP</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"๐"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">,</span> <span class="s2">"๑"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">,</span> <span class="s2">"๒"</span><span class="p">:</span> <span class="s2">"2"</span><span class="p">,</span> <span class="s2">"๓"</span><span class="p">:</span> <span class="s2">"3"</span><span class="p">,</span> <span class="s2">"๔"</span><span class="p">:</span> <span class="s2">"4"</span><span class="p">,</span>
+    <span class="s2">"๕"</span><span class="p">:</span> <span class="s2">"5"</span><span class="p">,</span> <span class="s2">"๖"</span><span class="p">:</span> <span class="s2">"6"</span><span class="p">,</span> <span class="s2">"๗"</span><span class="p">:</span> <span class="s2">"7"</span><span class="p">,</span> <span class="s2">"๘"</span><span class="p">:</span> <span class="s2">"8"</span><span class="p">,</span> <span class="s2">"๙"</span><span class="p">:</span> <span class="s2">"9"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">LETTER_TO_THAI</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"A"</span><span class="p">:</span> <span class="s2">"เอ"</span><span class="p">,</span> <span class="s2">"B"</span><span class="p">:</span> <span class="s2">"บี"</span><span class="p">,</span> <span class="s2">"C"</span><span class="p">:</span> <span class="s2">"ซี"</span><span class="p">,</span> <span class="s2">"D"</span><span class="p">:</span> <span class="s2">"ดี"</span><span class="p">,</span> <span class="s2">"E"</span><span class="p">:</span> <span class="s2">"อี"</span><span class="p">,</span>
+    <span class="s2">"F"</span><span class="p">:</span> <span class="s2">"เอฟ"</span><span class="p">,</span> <span class="s2">"G"</span><span class="p">:</span> <span class="s2">"จี"</span><span class="p">,</span> <span class="s2">"H"</span><span class="p">:</span> <span class="s2">"เอช"</span><span class="p">,</span> <span class="s2">"I"</span><span class="p">:</span> <span class="s2">"ไอ"</span><span class="p">,</span> <span class="s2">"J"</span><span class="p">:</span> <span class="s2">"เจ"</span><span class="p">,</span>
+    <span class="s2">"K"</span><span class="p">:</span> <span class="s2">"เค"</span><span class="p">,</span> <span class="s2">"L"</span><span class="p">:</span> <span class="s2">"แอล"</span><span class="p">,</span> <span class="s2">"M"</span><span class="p">:</span> <span class="s2">"เอ็ม"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">:</span> <span class="s2">"เอ็น"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">:</span> <span class="s2">"โอ"</span><span class="p">,</span>
+    <span class="s2">"P"</span><span class="p">:</span> <span class="s2">"พี"</span><span class="p">,</span> <span class="s2">"Q"</span><span class="p">:</span> <span class="s2">"คิว"</span><span class="p">,</span> <span class="s2">"R"</span><span class="p">:</span> <span class="s2">"อาร์"</span><span class="p">,</span> <span class="s2">"S"</span><span class="p">:</span> <span class="s2">"เอส"</span><span class="p">,</span> <span class="s2">"T"</span><span class="p">:</span> <span class="s2">"ที"</span><span class="p">,</span>
+    <span class="s2">"U"</span><span class="p">:</span> <span class="s2">"ยู"</span><span class="p">,</span> <span class="s2">"V"</span><span class="p">:</span> <span class="s2">"วี"</span><span class="p">,</span> <span class="s2">"W"</span><span class="p">:</span> <span class="s2">"ดับเบิลยู"</span><span class="p">,</span> <span class="s2">"X"</span><span class="p">:</span> <span class="s2">"เอ็กซ์"</span><span class="p">,</span>
+    <span class="s2">"Y"</span><span class="p">:</span> <span class="s2">"วาย"</span><span class="p">,</span> <span class="s2">"Z"</span><span class="p">:</span> <span class="s2">"แซด"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># we omit one-letter abbreviations to prevent ambiguous cases</span>
+<span class="c1"># such as ม. being เมตร and มหาวิทยาลัย</span>
+<span class="n">ABBREVIATIONS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Months</span>
+    <span class="s2">"ม.ค."</span><span class="p">:</span> <span class="s2">"มกราคม"</span><span class="p">,</span> <span class="s2">"ก.พ."</span><span class="p">:</span> <span class="s2">"กุมภาพันธ์"</span><span class="p">,</span> <span class="s2">"มี.ค."</span><span class="p">:</span> <span class="s2">"มีนาคม"</span><span class="p">,</span>
+    <span class="s2">"เม.ย."</span><span class="p">:</span> <span class="s2">"เมษายน"</span><span class="p">,</span> <span class="s2">"พ.ค."</span><span class="p">:</span> <span class="s2">"พฤษภาคม"</span><span class="p">,</span> <span class="s2">"มิ.ย."</span><span class="p">:</span> <span class="s2">"มิถุนายน"</span><span class="p">,</span>
+    <span class="s2">"ก.ค."</span><span class="p">:</span> <span class="s2">"กรกฎาคม"</span><span class="p">,</span> <span class="s2">"ส.ค."</span><span class="p">:</span> <span class="s2">"สิงหาคม"</span><span class="p">,</span> <span class="s2">"ก.ย."</span><span class="p">:</span> <span class="s2">"กันยายน"</span><span class="p">,</span>
+    <span class="s2">"ต.ค."</span><span class="p">:</span> <span class="s2">"ตุลาคม"</span><span class="p">,</span> <span class="s2">"พ.ย."</span><span class="p">:</span> <span class="s2">"พฤศจิกายน"</span><span class="p">,</span> <span class="s2">"ธ.ค."</span><span class="p">:</span> <span class="s2">"ธันวาคม"</span><span class="p">,</span>
+    <span class="c1"># Eras</span>
+    <span class="s2">"พ.ศ."</span><span class="p">:</span> <span class="s2">"พุทธศักราช"</span><span class="p">,</span> <span class="s2">"ค.ศ."</span><span class="p">:</span> <span class="s2">"คริสต์ศักราช"</span><span class="p">,</span>
+    <span class="c1"># Titles</span>
+    <span class="c1">## Common Civil &amp; Academic</span>
+    <span class="s2">"น.ส."</span><span class="p">:</span> <span class="s2">"นางสาว"</span><span class="p">,</span>
+    <span class="s2">"นส."</span><span class="p">:</span> <span class="s2">"นางสาว"</span><span class="p">,</span>
+    <span class="s2">"ดร."</span><span class="p">:</span> <span class="s2">"ด็อกเตอร์"</span><span class="p">,</span>
+    <span class="c1"># "ศ.": "ศาสตราจารย์",</span>
+    <span class="s2">"ผศ."</span><span class="p">:</span> <span class="s2">"ผู้ช่วยศาสตราจารย์"</span><span class="p">,</span>
+    <span class="s2">"รศ."</span><span class="p">:</span> <span class="s2">"รองศาสตราจารย์"</span><span class="p">,</span>
+    <span class="s2">"ดร."</span><span class="p">:</span> <span class="s2">"ด็อกเตอร์"</span><span class="p">,</span>
+    <span class="c1">## Medical &amp; Professional</span>
+    <span class="s2">"นพ."</span><span class="p">:</span> <span class="s2">"นายแพทย์"</span><span class="p">,</span>
+    <span class="s2">"พญ."</span><span class="p">:</span> <span class="s2">"แพทย์หญิง"</span><span class="p">,</span>
+    <span class="s2">"ทพ."</span><span class="p">:</span> <span class="s2">"ทันตแพทย์"</span><span class="p">,</span>
+    <span class="s2">"ทพญ."</span><span class="p">:</span> <span class="s2">"ทันตแพทย์หญิง"</span><span class="p">,</span>
+    <span class="s2">"น.สพ."</span><span class="p">:</span> <span class="s2">"นายสััตวแพทย์"</span><span class="p">,</span>
+    <span class="s2">"สพ.ญ."</span><span class="p">:</span> <span class="s2">"สัตวแพทย์หญิง"</span><span class="p">,</span>
+    <span class="s2">"ภก."</span><span class="p">:</span> <span class="s2">"เภสัชกร"</span><span class="p">,</span>
+    <span class="s2">"ภญ."</span><span class="p">:</span> <span class="s2">"เภสัชกรหญิง"</span><span class="p">,</span>
+    <span class="s2">"ทนพ."</span><span class="p">:</span> <span class="s2">"เทคนิคการแพทย์"</span><span class="p">,</span>
+    <span class="s2">"กภ."</span><span class="p">:</span> <span class="s2">"กายภาพบำบัด"</span><span class="p">,</span>
+    <span class="c1">## Army (Officers)</span>
+    <span class="s2">"พล.อ."</span><span class="p">:</span> <span class="s2">"พลเอก"</span><span class="p">,</span>
+    <span class="s2">"พล.ท."</span><span class="p">:</span> <span class="s2">"พลโท"</span><span class="p">,</span>
+    <span class="s2">"พล.ต."</span><span class="p">:</span> <span class="s2">"พลตรี"</span><span class="p">,</span>
+    <span class="s2">"พ.อ."</span><span class="p">:</span> <span class="s2">"พันเอก"</span><span class="p">,</span>
+    <span class="s2">"พ.ท."</span><span class="p">:</span> <span class="s2">"พันโท"</span><span class="p">,</span>
+    <span class="s2">"พ.ต."</span><span class="p">:</span> <span class="s2">"พันตรี"</span><span class="p">,</span>
+    <span class="s2">"ร.อ."</span><span class="p">:</span> <span class="s2">"ร้อยเอก"</span><span class="p">,</span>
+    <span class="s2">"ร.ท."</span><span class="p">:</span> <span class="s2">"ร้อยโท"</span><span class="p">,</span>
+    <span class="s2">"ร.ต."</span><span class="p">:</span> <span class="s2">"ร้อยตรี"</span><span class="p">,</span>
+    <span class="c1">## Army (NCOs)</span>
+    <span class="s2">"จ.ส.อ."</span><span class="p">:</span> <span class="s2">"จ่าสิบเอก"</span><span class="p">,</span>
+    <span class="s2">"จ.ส.ท."</span><span class="p">:</span> <span class="s2">"จ่าสิบโท"</span><span class="p">,</span>
+    <span class="s2">"จ.ส.ต."</span><span class="p">:</span> <span class="s2">"จ่าสิบตรี"</span><span class="p">,</span>
+    <span class="s2">"ส.อ."</span><span class="p">:</span> <span class="s2">"สิบเอก"</span><span class="p">,</span>
+    <span class="s2">"ส.ท."</span><span class="p">:</span> <span class="s2">"สิบโท"</span><span class="p">,</span>
+    <span class="s2">"ส.ต."</span><span class="p">:</span> <span class="s2">"สิบตรี"</span><span class="p">,</span>
+    <span class="c1">## Police</span>
+    <span class="s2">"พล.ต.อ."</span><span class="p">:</span> <span class="s2">"พลตำรวจเอก"</span><span class="p">,</span>
+    <span class="s2">"พล.ต.ท."</span><span class="p">:</span> <span class="s2">"พลตำรวจโท"</span><span class="p">,</span>
+    <span class="s2">"พล.ต.ต."</span><span class="p">:</span> <span class="s2">"พลตำรวจตรี"</span><span class="p">,</span>
+    <span class="s2">"พ.ต.อ."</span><span class="p">:</span> <span class="s2">"พันตำรวจเอก"</span><span class="p">,</span>
+    <span class="s2">"พ.ต.ท."</span><span class="p">:</span> <span class="s2">"พันตำรวจโท"</span><span class="p">,</span>
+    <span class="s2">"พ.ต.ต."</span><span class="p">:</span> <span class="s2">"พันตำรวจตรี"</span><span class="p">,</span>
+    <span class="s2">"ร.ต.อ."</span><span class="p">:</span> <span class="s2">"ร้อยตำรวจเอก"</span><span class="p">,</span>
+    <span class="s2">"ร.ต.ท."</span><span class="p">:</span> <span class="s2">"ร้อยตำรวจโท"</span><span class="p">,</span>
+    <span class="s2">"ร.ต.ต."</span><span class="p">:</span> <span class="s2">"ร้อยตำรวจตรี"</span><span class="p">,</span>
+    <span class="s2">"ด.ต."</span><span class="p">:</span> <span class="s2">"ดาบตำรวจ"</span><span class="p">,</span>
+    <span class="c1">## Navy (Officers &amp; NCOs); เรือเอก/โท/ตรี ซ้ำกับ ร้อยเอก/โท/ตรี</span>
+    <span class="s2">"พล.ร.อ."</span><span class="p">:</span> <span class="s2">"พลเรือเอก"</span><span class="p">,</span>
+    <span class="s2">"พล.ร.ท."</span><span class="p">:</span> <span class="s2">"พลเรือโท"</span><span class="p">,</span>
+    <span class="s2">"พล.ร.ต."</span><span class="p">:</span> <span class="s2">"พลเรือตรี"</span><span class="p">,</span>
+    <span class="s2">"น.อ."</span><span class="p">:</span> <span class="s2">"นาวาเอก"</span><span class="p">,</span>
+    <span class="s2">"น.ท."</span><span class="p">:</span> <span class="s2">"นาวาโท"</span><span class="p">,</span>
+    <span class="s2">"น.ต."</span><span class="p">:</span> <span class="s2">"นาวาตรี"</span><span class="p">,</span>
+    <span class="s2">"พ.จ.อ."</span><span class="p">:</span> <span class="s2">"พันจ่าเอก"</span><span class="p">,</span>
+    <span class="s2">"พ.จ.ท."</span><span class="p">:</span> <span class="s2">"พันจ่าโท"</span><span class="p">,</span>
+    <span class="s2">"พ.จ.ต."</span><span class="p">:</span> <span class="s2">"พันจ่าตรี"</span><span class="p">,</span>
+    <span class="s2">"จ.อ."</span><span class="p">:</span> <span class="s2">"จ่าเอก"</span><span class="p">,</span>
+    <span class="s2">"จ.ท."</span><span class="p">:</span> <span class="s2">"จ่าโท"</span><span class="p">,</span>
+    <span class="s2">"จ.ต."</span><span class="p">:</span> <span class="s2">"จ่าตรี"</span><span class="p">,</span>
+    <span class="c1">## Air Force (Officers &amp; NCOs); นาวาอากาศเอก/โท/ตรี ซ้ำกับ นาวาเอก/โท/ตรี</span>
+    <span class="s2">"พล.อ.อ."</span><span class="p">:</span> <span class="s2">"พลอากาศเอก"</span><span class="p">,</span>
+    <span class="s2">"พล.อ.ท."</span><span class="p">:</span> <span class="s2">"พลอากาศโท"</span><span class="p">,</span>
+    <span class="s2">"พล.อ.ต."</span><span class="p">:</span> <span class="s2">"พลอากาศตรี"</span><span class="p">,</span>
+    <span class="s2">"พ.อ.อ."</span><span class="p">:</span> <span class="s2">"พันจ่าอากาศเอก"</span><span class="p">,</span>
+    <span class="s2">"พ.อ.ท."</span><span class="p">:</span> <span class="s2">"พันจ่าอากาศโท"</span><span class="p">,</span>
+    <span class="s2">"พ.อ.ต."</span><span class="p">:</span> <span class="s2">"พันจ่าอากาศตรี"</span><span class="p">,</span>
+    <span class="c1">## Royal &amp; Noble</span>
+    <span class="s2">"ม.จ."</span><span class="p">:</span> <span class="s2">"หม่อมเจ้า"</span><span class="p">,</span>
+    <span class="s2">"ม.ร.ว."</span><span class="p">:</span> <span class="s2">"หม่อมราชวงศ์"</span><span class="p">,</span>
+    <span class="s2">"ม.ล."</span><span class="p">:</span> <span class="s2">"หม่อมหลวง"</span><span class="p">,</span>
+    <span class="c1"># Common</span>
+    <span class="s2">"กทม."</span><span class="p">:</span> <span class="s2">"กรุงเทพมหานคร"</span><span class="p">,</span>
+    <span class="s2">"รร."</span><span class="p">:</span> <span class="s2">"โรงเรียน"</span><span class="p">,</span> <span class="s2">"ร.ร."</span><span class="p">:</span> <span class="s2">"โรงเรียน"</span><span class="p">,</span>
+    <span class="s2">"รพ."</span><span class="p">:</span> <span class="s2">"โรงพยาบาล"</span><span class="p">,</span> <span class="s2">"ร.พ."</span><span class="p">:</span> <span class="s2">"โรงพยาบาล"</span><span class="p">,</span>
+    <span class="s2">"บจก."</span><span class="p">:</span> <span class="s2">"บริษัทจำกัด"</span><span class="p">,</span> 
+    <span class="s2">"ฯลฯ"</span><span class="p">:</span> <span class="s2">"เป็นต้น"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">SYMBOLS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"%"</span><span class="p">:</span> <span class="s2">"เปอร์เซ็นต์"</span><span class="p">,</span>
+    <span class="s2">"°C"</span><span class="p">:</span> <span class="s2">"องศาเซลเซียส"</span><span class="p">,</span>
+    <span class="s2">"°F"</span><span class="p">:</span> <span class="s2">"องศาฟาเรนไฮต์"</span><span class="p">,</span>
+    <span class="s2">"°"</span><span class="p">:</span> <span class="s2">"องศา"</span><span class="p">,</span>
+    <span class="s2">"@"</span><span class="p">:</span> <span class="s2">" แอท "</span><span class="p">,</span>
+    <span class="s2">"/"</span><span class="p">:</span> <span class="s2">" ทับ "</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">#exclude letter-by-letter readings as it's already handled by other rules</span>
+<span class="c1">#exclude single-letter abbr since can be confusing</span>
+<span class="n">ENGLISH_ABBREVS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Finance</span>
+    <span class="s2">"thb"</span><span class="p">:</span> <span class="s2">"บาท"</span><span class="p">,</span> <span class="s2">"usd"</span><span class="p">:</span> <span class="s2">"ดอลลาร์"</span><span class="p">,</span> <span class="s2">"eur"</span><span class="p">:</span> <span class="s2">"ยูโร"</span><span class="p">,</span>
+    <span class="s2">"vat"</span><span class="p">:</span> <span class="s2">"แวต"</span><span class="p">,</span><span class="s2">"pin"</span><span class="p">:</span> <span class="s2">"พิน"</span><span class="p">,</span> 
+    <span class="c1"># "atm": "เอทีเอ็ม", "gdp": "จีดีพี",</span>
+    
+    <span class="c1"># Tech</span>
+    <span class="c1"># "gps": "จีพีเอส",</span>
+    <span class="c1"># "usb": "ยูเอสบี", "cpu": "ซีพียู", "gpu": "จีพียู", </span>
+    <span class="c1"># "sms": "เอสเอ็มเอส","qr": "คิวอาร์", "ai": "เอไอ", </span>
+    <span class="s2">"ram"</span><span class="p">:</span> <span class="s2">"แรม"</span><span class="p">,</span> <span class="s2">"wifi"</span><span class="p">:</span> <span class="s2">"ไวไฟ"</span><span class="p">,</span> <span class="s2">"otp"</span><span class="p">:</span> <span class="s2">"โอทีพี"</span><span class="p">,</span>
+    <span class="c1"># "llm": "แอว แอว เอ็ม",</span>
+    <span class="c1"># "it": "ไอที", "id": "ไอดี",</span>
+    <span class="c1"># "url": "ยูอาร์แอล", "pdf": "พีดีเอฟ",</span>
+    <span class="c1"># "tv": "ทีวี", "vip": "วีไอพี",</span>
+
+    <span class="c1"># Health</span>
+    <span class="s2">"covid"</span><span class="p">:</span> <span class="s2">"โควิด"</span><span class="p">,</span> 
+    <span class="c1"># "icu": "ไอซียู", "opd": "โอพีดี",</span>
+
+    <span class="c1"># Orgs</span>
+    <span class="c1"># "un": "ยูเอ็น", "who": "ดับเบิลยูเอชโอ",</span>
+    <span class="c1"># "nba": "เอ็นบีเอ", </span>
+    <span class="s2">"fifa"</span><span class="p">:</span> <span class="s2">"ฟีฟ่า"</span><span class="p">,</span>
+
+    <span class="c1"># Brands / internet words commonly read as words, not letters</span>
+    <span class="s2">"line"</span><span class="p">:</span> <span class="s2">"ไลน์"</span><span class="p">,</span> <span class="s2">"facebook"</span><span class="p">:</span> <span class="s2">"เฟซบุ๊ก"</span><span class="p">,</span> <span class="s2">"instagram"</span><span class="p">:</span> <span class="s2">"อินสตาแกรม"</span><span class="p">,</span>
+    <span class="s2">"amazon"</span><span class="p">:</span><span class="s2">"อมาซอน"</span><span class="p">,</span> <span class="s2">"twitter"</span><span class="p">:</span> <span class="s2">"ทวิตเตอร์"</span><span class="p">,</span>
+    <span class="s2">"google"</span><span class="p">:</span> <span class="s2">"กูเกิล"</span><span class="p">,</span> <span class="s2">"youtube"</span><span class="p">:</span> <span class="s2">"ยูทูบ"</span><span class="p">,</span> <span class="s2">"tiktok"</span><span class="p">:</span> <span class="s2">"ติ๊กต็อก"</span><span class="p">,</span>
+    <span class="s2">"gmail"</span><span class="p">:</span> <span class="s2">"จีเมล"</span><span class="p">,</span> <span class="s2">"hotmail"</span><span class="p">:</span> <span class="s2">"ฮอตเมล"</span><span class="p">,</span>
+    <span class="s2">"email"</span><span class="p">:</span> <span class="s2">"อีเมล"</span><span class="p">,</span> <span class="s2">"com"</span><span class="p">:</span> <span class="s2">"คอม"</span><span class="p">,</span> <span class="s2">"net"</span><span class="p">:</span> <span class="s2">"เน็ต"</span><span class="p">,</span>
+    <span class="s2">"app"</span><span class="p">:</span> <span class="s2">"แอป"</span><span class="p">,</span>
+    <span class="s2">"lazada"</span><span class="p">:</span> <span class="s2">"ลาซาด้า"</span><span class="p">,</span>
+    <span class="s2">"shopee"</span><span class="p">:</span> <span class="s2">"ช้อปปี้"</span><span class="p">,</span>
+    <span class="s2">"grab"</span><span class="p">:</span> <span class="s2">"แกร็บ"</span><span class="p">,</span>
+    <span class="s2">"uber"</span><span class="p">:</span> <span class="s2">"อูเบอร์"</span><span class="p">,</span>
+    <span class="s2">"whatsapp"</span><span class="p">:</span> <span class="s2">"วอทส์แอป"</span><span class="p">,</span>
+    <span class="s2">"paypal"</span><span class="p">:</span> <span class="s2">"เพย์พาล"</span><span class="p">,</span>
+    <span class="s2">"promptpay"</span><span class="p">:</span> <span class="s2">"พร้อมเพย์"</span><span class="p">,</span>
+    <span class="s2">"truemoney"</span><span class="p">:</span> <span class="s2">"ทรูมันนี่"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">#also comment out single-letter units even though there is regex lookahead</span>
+<span class="c1">#to prevent things like 214/12 ม.10 becoming 214/12 เมตร 10</span>
+<span class="n">UNITS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"km"</span><span class="p">:</span> <span class="s2">"กิโลเมตร"</span><span class="p">,</span> 
+    <span class="s2">"cm"</span><span class="p">:</span> <span class="s2">"เซนติเมตร"</span><span class="p">,</span> 
+    <span class="s2">"mm"</span><span class="p">:</span> <span class="s2">"มิลลิเมตร"</span><span class="p">,</span> 
+    <span class="c1"># "m": "เมตร",</span>
+    <span class="s2">"ml"</span><span class="p">:</span> <span class="s2">"มิลลิลิตร"</span><span class="p">,</span> 
+    <span class="s2">"kwh"</span><span class="p">:</span> <span class="s2">"กิโลวัตต์ชั่วโมง"</span><span class="p">,</span> 
+    <span class="s2">"kw"</span><span class="p">:</span> <span class="s2">"กิโลวัตต์"</span><span class="p">,</span> 
+    <span class="c1"># "w": "วัตต์",</span>
+    <span class="s2">"mb"</span><span class="p">:</span> <span class="s2">"เมกะไบต์"</span><span class="p">,</span> <span class="s2">"gb"</span><span class="p">:</span> <span class="s2">"กิกะไบต์"</span><span class="p">,</span> <span class="s2">"tb"</span><span class="p">:</span> <span class="s2">"เทราไบต์"</span><span class="p">,</span> <span class="s2">"kb"</span><span class="p">:</span> <span class="s2">"กิโลไบต์"</span><span class="p">,</span>
+    <span class="s2">"mbps"</span><span class="p">:</span> <span class="s2">"เมกะบิตต่อวินาที"</span><span class="p">,</span>
+    <span class="c1">## Length</span>
+    <span class="s2">"กม."</span><span class="p">:</span> <span class="s2">"กิโลเมตร"</span><span class="p">,</span>
+    <span class="c1"># "ม.": "เมตร",</span>
+    <span class="s2">"ซม."</span><span class="p">:</span> <span class="s2">"เซนติเมตร"</span><span class="p">,</span>
+    <span class="s2">"มม."</span><span class="p">:</span> <span class="s2">"มิลลิเมตร"</span><span class="p">,</span>
+    <span class="c1"># "ว.": "วา",</span>
+    <span class="c1">## Area</span>
+    <span class="s2">"ตร.กม."</span><span class="p">:</span> <span class="s2">"ตารางกิโลเมตร"</span><span class="p">,</span>
+    <span class="s2">"ตร.ม."</span><span class="p">:</span> <span class="s2">"ตารางเมตร"</span><span class="p">,</span>
+    <span class="s2">"ตร.ซม."</span><span class="p">:</span> <span class="s2">"ตารางเซนติเมตร"</span><span class="p">,</span>
+    <span class="s2">"ตร.มม."</span><span class="p">:</span> <span class="s2">"ตารางมิลลิเมตร"</span><span class="p">,</span>
+    <span class="s2">"ตร.ว."</span><span class="p">:</span> <span class="s2">"ตารางวา"</span><span class="p">,</span>
+    <span class="c1">## Volume</span>
+    <span class="s2">"ลบ.ม."</span><span class="p">:</span> <span class="s2">"ลูกบาศก์เมตร"</span><span class="p">,</span>
+    <span class="s2">"ลบ.ซม."</span><span class="p">:</span> <span class="s2">"ลูกบาศก์เซนติเมตร"</span><span class="p">,</span>
+    <span class="c1"># "ล.": "ลิตร",</span>
+    <span class="s2">"มล."</span><span class="p">:</span> <span class="s2">"มิลลิลิตร"</span><span class="p">,</span>
+    <span class="s2">"กล."</span><span class="p">:</span> <span class="s2">"กิโลลิตร"</span><span class="p">,</span>
+    <span class="c1">## Weight</span>
+    <span class="c1"># "ต.": "เมตริกตัน",</span>
+    <span class="s2">"กก."</span><span class="p">:</span> <span class="s2">"กิโลกรัม"</span><span class="p">,</span>
+    <span class="c1"># "ก.": "กรัม",</span>
+    <span class="s2">"มก."</span><span class="p">:</span> <span class="s2">"มิลลิกรัม"</span><span class="p">,</span>
+    <span class="s2">"kg"</span><span class="p">:</span> <span class="s2">"กิโลกรัม"</span><span class="p">,</span> 
+    <span class="c1"># "g": "กรัม", </span>
+    <span class="s2">"mg"</span><span class="p">:</span> <span class="s2">"มิลลิกรัม"</span><span class="p">,</span>
+    <span class="c1"># "t": "เมตริกตัน",</span>
+<span class="p">}</span>
+
+<span class="c1">#replace longest symbol first</span>
+<span class="n">_SYMBOL_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="s2">"|"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">SYMBOLS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="p">)</span>
+<span class="c1">#replace longest abbreviation first</span>
+<span class="n">_ENGLISH_ABBREV_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">"\b("</span> <span class="o">+</span> <span class="s2">"|"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ENGLISH_ABBREVS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span> <span class="o">+</span> <span class="sa">r</span><span class="s2">")"</span><span class="p">,</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span>
+<span class="p">)</span>
+<span class="c1">#replace longest unit first</span>
+<span class="n">_UNIT_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">"(?&lt;=\d)\s*("</span> <span class="o">+</span> <span class="s2">"|"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">UNITS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span> <span class="o">+</span> <span class="sa">r</span><span class="s2">")"</span>
+<span class="p">)</span>
+
+<span class="n">_THAI_NUMERAL_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[๐-๙]+"</span><span class="p">)</span>
+<span class="c1"># optional trailing นาฬิกา / น. is consumed so "8:00 น." doesn't duplicate it</span>
+<span class="n">_TIME_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\b(\d{1,2}):(\d</span><span class="si">{2}</span><span class="s2">)(?:\s*(?:นาฬิกา|น\.))?"</span><span class="p">)</span>
+<span class="n">_EMAIL_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[A-Za-z0-9._-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"</span><span class="p">)</span>
+<span class="n">_PHONE_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\d{2,4}[-\.]\d{3,4}[-\.]\d{3,4}"</span><span class="p">)</span>
+<span class="n">_ALPHANUM_ID_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">"[A-Za-z]+[\-]?\d+[\-\dA-Za-z]*|\d+[\-]?[A-Za-z]+[\-\dA-Za-z]*"</span>
+<span class="p">)</span>
+<span class="n">_COMMA_NUMBER_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"-?\d{1,3}(?:,\d</span><span class="si">{3}</span><span class="s2">)+(?:\.\d+)?"</span><span class="p">)</span>
+<span class="n">_NUMBER_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"-?\d+(?:\.\d+)?"</span><span class="p">)</span>
+<span class="c1">#replace longest abbreviation first</span>
+<span class="n">_ABBREV_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="s2">"|"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ABBREVIATIONS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="p">)</span>
+<span class="n">_LATIN_RESIDUE_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[A-Za-z]+"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_number_group_to_thai</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">remaining</span> <span class="o">=</span> <span class="n">n</span>
+    <span class="k">for</span> <span class="n">place</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">100000</span><span class="p">,</span> <span class="mi">10000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+        <span class="n">digit</span> <span class="o">=</span> <span class="n">remaining</span> <span class="o">//</span> <span class="n">place</span>
+        <span class="n">remaining</span> <span class="o">=</span> <span class="n">remaining</span> <span class="o">%</span> <span class="n">place</span>
+        <span class="k">if</span> <span class="n">digit</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">place</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">digit</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"เอ็ด"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">digit</span><span class="p">)])</span>
+        <span class="k">elif</span> <span class="n">place</span> <span class="o">==</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">digit</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"สิบ"</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">digit</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"ยี่สิบ"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">digit</span><span class="p">)]</span> <span class="o">+</span> <span class="s2">"สิบ"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">place</span> <span class="o">==</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">digit</span><span class="p">)]</span> <span class="o">+</span> <span class="s2">"ร้อย"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">place</span> <span class="o">==</span> <span class="mi">1000</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">digit</span><span class="p">)]</span> <span class="o">+</span> <span class="s2">"พัน"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">place</span> <span class="o">==</span> <span class="mi">10000</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">digit</span><span class="p">)]</span> <span class="o">+</span> <span class="s2">"หมื่น"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">place</span> <span class="o">==</span> <span class="mi">100000</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">digit</span><span class="p">)]</span> <span class="o">+</span> <span class="s2">"แสน"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_integer_to_thai</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"ศูนย์"</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"ลบ"</span> <span class="o">+</span> <span class="n">_integer_to_thai</span><span class="p">(</span><span class="o">-</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">million_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="n">n</span> <span class="o">%</span> <span class="mi">1000000</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">n</span> <span class="o">//</span> <span class="mi">1000000</span>
+        <span class="k">if</span> <span class="n">group</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">group_text</span> <span class="o">=</span> <span class="n">_number_group_to_thai</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="s2">"ล้าน"</span> <span class="o">*</span> <span class="n">million_count</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">group_text</span> <span class="o">+</span> <span class="n">suffix</span><span class="p">)</span>
+        <span class="n">million_count</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">parts</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_decimal_to_thai</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">if</span> <span class="s2">"."</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">integer_part</span><span class="p">,</span> <span class="n">decimal_part</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">integer_part</span> <span class="o">=</span> <span class="n">integer_part</span> <span class="ow">or</span> <span class="s2">"0"</span>
+        <span class="n">int_thai</span> <span class="o">=</span> <span class="n">_integer_to_thai</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">integer_part</span><span class="p">))</span>
+        <span class="n">dec_thai</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">decimal_part</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">int_thai</span> <span class="o">+</span> <span class="s2">"จุด"</span> <span class="o">+</span> <span class="n">dec_thai</span>
+    <span class="k">return</span> <span class="n">_integer_to_thai</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_digits_to_thai</span><span class="p">(</span><span class="n">digits</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">digits</span><span class="p">)</span>
+
+
+<span class="n">_EMAIL_SEPARATORS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"@"</span><span class="p">:</span> <span class="s2">" แอท "</span><span class="p">,</span> <span class="s2">"."</span><span class="p">:</span> <span class="s2">" ดอท "</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">:</span> <span class="s2">" ขีด "</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">:</span> <span class="s2">" ขีดล่าง "</span><span class="p">}</span>
+<span class="c1"># words read as words in an address; anything else is spelled letter-by-letter</span>
+<span class="n">_EMAIL_WORDS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"gmail"</span><span class="p">:</span> <span class="s2">"จีเมล"</span><span class="p">,</span> <span class="s2">"hotmail"</span><span class="p">:</span> <span class="s2">"ฮอตเมล"</span><span class="p">,</span> <span class="s2">"yahoo"</span><span class="p">:</span> <span class="s2">"ยาฮู"</span><span class="p">,</span>
+    <span class="s2">"outlook"</span><span class="p">:</span> <span class="s2">"เอาต์ลุก"</span><span class="p">,</span> <span class="s2">"com"</span><span class="p">:</span> <span class="s2">"คอม"</span><span class="p">,</span> <span class="s2">"net"</span><span class="p">:</span> <span class="s2">"เน็ต"</span><span class="p">,</span> <span class="s2">"org"</span><span class="p">:</span> <span class="s2">"ออร์ก"</span><span class="p">,</span>
+    <span class="c1"># "co": "ซีโอ", "th": "ทีเอช", </span>
+    <span class="s2">"mail"</span><span class="p">:</span> <span class="s2">"เมล"</span><span class="p">,</span> <span class="s2">"email"</span><span class="p">:</span> <span class="s2">"อีเมล"</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_email_to_thai</span><span class="p">(</span><span class="n">match</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""somchai.w@gmail.com → Thai readout with แอท/ดอท. Runs before</span>
+<span class="sd">    abbreviation expansion so dots can't false-match Thai abbreviations."""</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="s2">""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">():</span>
+        <span class="k">nonlocal</span> <span class="n">token</span>
+        <span class="k">if</span> <span class="n">token</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">_EMAIL_WORDS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+                <span class="ow">or</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="n">THAI_DIGITS</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="k">else</span> <span class="n">LETTER_TO_THAI</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="n">c</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">token</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="s2">""</span>
+
+    <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">_EMAIL_SEPARATORS</span><span class="p">:</span>
+            <span class="n">flush</span><span class="p">()</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_EMAIL_SEPARATORS</span><span class="p">[</span><span class="n">char</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">+=</span> <span class="n">char</span>
+    <span class="n">flush</span><span class="p">()</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_time_to_thai</span><span class="p">(</span><span class="n">match</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">hours</span><span class="p">,</span> <span class="n">minutes</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">_integer_to_thai</span><span class="p">(</span><span class="n">hours</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"นาฬิกา"</span>
+    <span class="k">if</span> <span class="n">minutes</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">+=</span> <span class="n">_integer_to_thai</span><span class="p">(</span><span class="n">minutes</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"นาที"</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_phone_number_to_thai</span><span class="p">(</span><span class="n">match</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">phone</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[-.]"</span><span class="p">,</span> <span class="n">phone</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_digits_to_thai</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_alphanum_to_thai</span><span class="p">(</span><span class="n">match</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">token</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">char</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">THAI_DIGITS</span><span class="p">[</span><span class="n">char</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">char</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">LETTER_TO_THAI</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LETTER_TO_THAI</span><span class="p">[</span><span class="n">char</span><span class="o">.</span><span class="n">upper</span><span class="p">()])</span>
+        <span class="k">elif</span> <span class="n">char</span> <span class="o">==</span> <span class="s2">"-"</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">" "</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">char</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_strip_commas_and_convert</span><span class="p">(</span><span class="n">match</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_decimal_to_thai</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_number_or_id_to_thai</span><span class="p">(</span><span class="n">match</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+    <span class="n">negative</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">"."</span> <span class="ow">in</span> <span class="n">raw</span><span class="p">:</span>
+        <span class="n">integer_part</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">integer_part</span> <span class="o">=</span> <span class="n">raw</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">integer_part</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">7</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">_digits_to_thai</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"."</span><span class="p">,</span> <span class="s2">"จุด"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+        <span class="k">if</span> <span class="s2">"."</span> <span class="ow">in</span> <span class="n">raw</span><span class="p">:</span>
+            <span class="n">int_p</span><span class="p">,</span> <span class="n">dec_p</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">_digits_to_thai</span><span class="p">(</span><span class="n">int_p</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"จุด"</span> <span class="o">+</span> <span class="n">_digits_to_thai</span><span class="p">(</span><span class="n">dec_p</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">_digits_to_thai</span><span class="p">(</span><span class="n">integer_part</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">negative</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="s2">"ลบ"</span> <span class="o">+</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">return</span> <span class="n">_decimal_to_thai</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_expand_abbreviations</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_ABBREV_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">ABBREVIATIONS</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)],</span> <span class="n">text</span><span class="p">)</span>
+
+
+<span class="c1"># Acronyms / initialisms that are always spelled letter-by-letter in Thai</span>
+<span class="n">_SPELL_OUT_ACRONYMS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"aa"</span><span class="p">,</span> <span class="s2">"ai"</span><span class="p">,</span> <span class="s2">"ais"</span><span class="p">,</span> <span class="s2">"apk"</span><span class="p">,</span> <span class="s2">"api"</span><span class="p">,</span> <span class="s2">"arl"</span><span class="p">,</span> <span class="s2">"asr"</span><span class="p">,</span> <span class="s2">"atm"</span><span class="p">,</span> <span class="s2">"aws"</span><span class="p">,</span>
+    <span class="s2">"bbc"</span><span class="p">,</span> <span class="s2">"bbl"</span><span class="p">,</span> <span class="s2">"bmta"</span><span class="p">,</span> <span class="s2">"bts"</span><span class="p">,</span>
+    <span class="s2">"ceo"</span><span class="p">,</span> <span class="s2">"cfo"</span><span class="p">,</span> <span class="s2">"cia"</span><span class="p">,</span> <span class="s2">"cli"</span><span class="p">,</span> <span class="s2">"cnn"</span><span class="p">,</span> <span class="s2">"coo"</span><span class="p">,</span> <span class="s2">"cpu"</span><span class="p">,</span> <span class="s2">"css"</span><span class="p">,</span> <span class="s2">"cto"</span><span class="p">,</span>
+    <span class="s2">"dna"</span><span class="p">,</span> <span class="s2">"dns"</span><span class="p">,</span> <span class="s2">"dtac"</span><span class="p">,</span> <span class="s2">"dvd"</span><span class="p">,</span>
+    <span class="s2">"eu"</span><span class="p">,</span>
+    <span class="s2">"fbi"</span><span class="p">,</span> <span class="s2">"ftp"</span><span class="p">,</span>
+    <span class="s2">"gcp"</span><span class="p">,</span> <span class="s2">"gdp"</span><span class="p">,</span> <span class="s2">"gps"</span><span class="p">,</span> <span class="s2">"gpu"</span><span class="p">,</span> <span class="s2">"gui"</span><span class="p">,</span>
+    <span class="s2">"hdd"</span><span class="p">,</span> <span class="s2">"hr"</span><span class="p">,</span> <span class="s2">"html"</span><span class="p">,</span> <span class="s2">"http"</span><span class="p">,</span> <span class="s2">"https"</span><span class="p">,</span>
+    <span class="s2">"icu"</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">,</span> <span class="s2">"ide"</span><span class="p">,</span> <span class="s2">"ios"</span><span class="p">,</span> <span class="s2">"iot"</span><span class="p">,</span> <span class="s2">"ip"</span><span class="p">,</span> <span class="s2">"it"</span><span class="p">,</span>
+    <span class="s2">"kbank"</span><span class="p">,</span> <span class="s2">"ktb"</span><span class="p">,</span>
+    <span class="s2">"lan"</span><span class="p">,</span> <span class="s2">"lcd"</span><span class="p">,</span> <span class="s2">"led"</span><span class="p">,</span> <span class="s2">"llm"</span><span class="p">,</span>
+    <span class="s2">"mrt"</span><span class="p">,</span>
+    <span class="s2">"nba"</span><span class="p">,</span> <span class="s2">"nlp"</span><span class="p">,</span> <span class="s2">"nft"</span><span class="p">,</span>
+    <span class="s2">"ocr"</span><span class="p">,</span> <span class="s2">"opd"</span><span class="p">,</span> <span class="s2">"os"</span><span class="p">,</span>
+    <span class="s2">"pc"</span><span class="p">,</span> <span class="s2">"pdf"</span><span class="p">,</span> <span class="s2">"pr"</span><span class="p">,</span>
+    <span class="s2">"qa"</span><span class="p">,</span> <span class="s2">"qr"</span><span class="p">,</span>
+    <span class="s2">"rna"</span><span class="p">,</span> <span class="s2">"rom"</span><span class="p">,</span>
+    <span class="s2">"scb"</span><span class="p">,</span> <span class="s2">"sdk"</span><span class="p">,</span> <span class="s2">"sim"</span><span class="p">,</span> <span class="s2">"sms"</span><span class="p">,</span> <span class="s2">"sql"</span><span class="p">,</span> <span class="s2">"ssd"</span><span class="p">,</span> <span class="s2">"ssh"</span><span class="p">,</span>
+    <span class="s2">"tot"</span><span class="p">,</span> <span class="s2">"ttb"</span><span class="p">,</span> <span class="s2">"tts"</span><span class="p">,</span> <span class="s2">"tv"</span><span class="p">,</span>
+    <span class="s2">"uae"</span><span class="p">,</span> <span class="s2">"ui"</span><span class="p">,</span> <span class="s2">"uk"</span><span class="p">,</span> <span class="s2">"un"</span><span class="p">,</span> <span class="s2">"url"</span><span class="p">,</span> <span class="s2">"usa"</span><span class="p">,</span> <span class="s2">"usb"</span><span class="p">,</span> <span class="s2">"ux"</span><span class="p">,</span>
+    <span class="s2">"vip"</span><span class="p">,</span> <span class="s2">"vpn"</span><span class="p">,</span> <span class="s2">"vr"</span><span class="p">,</span>
+    <span class="s2">"wan"</span><span class="p">,</span> <span class="s2">"who"</span><span class="p">,</span> <span class="s2">"www"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># Common short 2-3 letter English words that are read as words even if written in ALL CAPS</span>
+<span class="n">_SHORT_ENGLISH_WORDS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"all"</span><span class="p">,</span> <span class="s2">"and"</span><span class="p">,</span> <span class="s2">"any"</span><span class="p">,</span> <span class="s2">"are"</span><span class="p">,</span> <span class="s2">"art"</span><span class="p">,</span> <span class="s2">"ask"</span><span class="p">,</span> <span class="s2">"add"</span><span class="p">,</span> <span class="s2">"act"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">,</span> <span class="s2">"ago"</span><span class="p">,</span> <span class="s2">"air"</span><span class="p">,</span> <span class="s2">"arm"</span><span class="p">,</span>
+    <span class="s2">"bad"</span><span class="p">,</span> <span class="s2">"bag"</span><span class="p">,</span> <span class="s2">"ban"</span><span class="p">,</span> <span class="s2">"bar"</span><span class="p">,</span> <span class="s2">"bat"</span><span class="p">,</span> <span class="s2">"bay"</span><span class="p">,</span> <span class="s2">"bed"</span><span class="p">,</span> <span class="s2">"bee"</span><span class="p">,</span> <span class="s2">"bet"</span><span class="p">,</span> <span class="s2">"big"</span><span class="p">,</span> <span class="s2">"bit"</span><span class="p">,</span> <span class="s2">"box"</span><span class="p">,</span> <span class="s2">"boy"</span><span class="p">,</span> <span class="s2">"bug"</span><span class="p">,</span> <span class="s2">"bus"</span><span class="p">,</span> <span class="s2">"but"</span><span class="p">,</span> <span class="s2">"buy"</span><span class="p">,</span>
+    <span class="s2">"can"</span><span class="p">,</span> <span class="s2">"car"</span><span class="p">,</span> <span class="s2">"cat"</span><span class="p">,</span> <span class="s2">"cup"</span><span class="p">,</span> <span class="s2">"cut"</span><span class="p">,</span> <span class="s2">"cry"</span><span class="p">,</span>
+    <span class="s2">"dad"</span><span class="p">,</span> <span class="s2">"day"</span><span class="p">,</span> <span class="s2">"die"</span><span class="p">,</span> <span class="s2">"dog"</span><span class="p">,</span> <span class="s2">"dry"</span><span class="p">,</span> <span class="s2">"due"</span><span class="p">,</span>
+    <span class="s2">"ear"</span><span class="p">,</span> <span class="s2">"eat"</span><span class="p">,</span> <span class="s2">"egg"</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">,</span> <span class="s2">"era"</span><span class="p">,</span> <span class="s2">"eye"</span><span class="p">,</span>
+    <span class="s2">"fan"</span><span class="p">,</span> <span class="s2">"far"</span><span class="p">,</span> <span class="s2">"fat"</span><span class="p">,</span> <span class="s2">"fee"</span><span class="p">,</span> <span class="s2">"few"</span><span class="p">,</span> <span class="s2">"fit"</span><span class="p">,</span> <span class="s2">"fix"</span><span class="p">,</span> <span class="s2">"fly"</span><span class="p">,</span> <span class="s2">"for"</span><span class="p">,</span> <span class="s2">"fun"</span><span class="p">,</span>
+    <span class="s2">"gap"</span><span class="p">,</span> <span class="s2">"gas"</span><span class="p">,</span> <span class="s2">"get"</span><span class="p">,</span> <span class="s2">"god"</span><span class="p">,</span> <span class="s2">"got"</span><span class="p">,</span> <span class="s2">"gun"</span><span class="p">,</span> <span class="s2">"guy"</span><span class="p">,</span> <span class="s2">"gym"</span><span class="p">,</span>
+    <span class="s2">"hat"</span><span class="p">,</span> <span class="s2">"her"</span><span class="p">,</span> <span class="s2">"hey"</span><span class="p">,</span> <span class="s2">"him"</span><span class="p">,</span> <span class="s2">"his"</span><span class="p">,</span> <span class="s2">"hit"</span><span class="p">,</span> <span class="s2">"hot"</span><span class="p">,</span> <span class="s2">"how"</span><span class="p">,</span> <span class="s2">"ice"</span><span class="p">,</span> <span class="s2">"ill"</span><span class="p">,</span> <span class="s2">"ink"</span><span class="p">,</span> <span class="s2">"inn"</span><span class="p">,</span> <span class="s2">"its"</span><span class="p">,</span>
+    <span class="s2">"jam"</span><span class="p">,</span> <span class="s2">"jet"</span><span class="p">,</span> <span class="s2">"job"</span><span class="p">,</span> <span class="s2">"joy"</span><span class="p">,</span>
+    <span class="s2">"key"</span><span class="p">,</span> <span class="s2">"kid"</span><span class="p">,</span> <span class="s2">"kit"</span><span class="p">,</span>
+    <span class="s2">"lab"</span><span class="p">,</span> <span class="s2">"law"</span><span class="p">,</span> <span class="s2">"lay"</span><span class="p">,</span> <span class="s2">"leg"</span><span class="p">,</span> <span class="s2">"let"</span><span class="p">,</span> <span class="s2">"lie"</span><span class="p">,</span> <span class="s2">"lip"</span><span class="p">,</span> <span class="s2">"log"</span><span class="p">,</span> <span class="s2">"lot"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">,</span>
+    <span class="s2">"mad"</span><span class="p">,</span> <span class="s2">"man"</span><span class="p">,</span> <span class="s2">"map"</span><span class="p">,</span> <span class="s2">"max"</span><span class="p">,</span> <span class="s2">"may"</span><span class="p">,</span> <span class="s2">"men"</span><span class="p">,</span> <span class="s2">"mix"</span><span class="p">,</span> <span class="s2">"mom"</span><span class="p">,</span> <span class="s2">"mud"</span><span class="p">,</span>
+    <span class="s2">"net"</span><span class="p">,</span> <span class="s2">"new"</span><span class="p">,</span> <span class="s2">"no"</span><span class="p">,</span> <span class="s2">"nor"</span><span class="p">,</span> <span class="s2">"not"</span><span class="p">,</span> <span class="s2">"now"</span><span class="p">,</span> <span class="s2">"nut"</span><span class="p">,</span>
+    <span class="s2">"odd"</span><span class="p">,</span> <span class="s2">"off"</span><span class="p">,</span> <span class="s2">"oil"</span><span class="p">,</span> <span class="s2">"old"</span><span class="p">,</span> <span class="s2">"one"</span><span class="p">,</span> <span class="s2">"our"</span><span class="p">,</span> <span class="s2">"out"</span><span class="p">,</span> <span class="s2">"owe"</span><span class="p">,</span> <span class="s2">"own"</span><span class="p">,</span>
+    <span class="s2">"pan"</span><span class="p">,</span> <span class="s2">"pay"</span><span class="p">,</span> <span class="s2">"pen"</span><span class="p">,</span> <span class="s2">"pet"</span><span class="p">,</span> <span class="s2">"pie"</span><span class="p">,</span> <span class="s2">"pig"</span><span class="p">,</span> <span class="s2">"pop"</span><span class="p">,</span> <span class="s2">"pot"</span><span class="p">,</span> <span class="s2">"pro"</span><span class="p">,</span> <span class="s2">"put"</span><span class="p">,</span>
+    <span class="s2">"raw"</span><span class="p">,</span> <span class="s2">"red"</span><span class="p">,</span> <span class="s2">"rid"</span><span class="p">,</span> <span class="s2">"row"</span><span class="p">,</span> <span class="s2">"run"</span><span class="p">,</span>
+    <span class="s2">"sad"</span><span class="p">,</span> <span class="s2">"saw"</span><span class="p">,</span> <span class="s2">"say"</span><span class="p">,</span> <span class="s2">"sea"</span><span class="p">,</span> <span class="s2">"see"</span><span class="p">,</span> <span class="s2">"set"</span><span class="p">,</span> <span class="s2">"she"</span><span class="p">,</span> <span class="s2">"shy"</span><span class="p">,</span> <span class="s2">"sin"</span><span class="p">,</span> <span class="s2">"sir"</span><span class="p">,</span> <span class="s2">"sit"</span><span class="p">,</span> <span class="s2">"six"</span><span class="p">,</span> <span class="s2">"sky"</span><span class="p">,</span> <span class="s2">"son"</span><span class="p">,</span> <span class="s2">"sum"</span><span class="p">,</span> <span class="s2">"sun"</span><span class="p">,</span>
+    <span class="s2">"tag"</span><span class="p">,</span> <span class="s2">"tap"</span><span class="p">,</span> <span class="s2">"tax"</span><span class="p">,</span> <span class="s2">"tea"</span><span class="p">,</span> <span class="s2">"ten"</span><span class="p">,</span> <span class="s2">"the"</span><span class="p">,</span> <span class="s2">"tie"</span><span class="p">,</span> <span class="s2">"tip"</span><span class="p">,</span> <span class="s2">"toe"</span><span class="p">,</span> <span class="s2">"top"</span><span class="p">,</span> <span class="s2">"toy"</span><span class="p">,</span> <span class="s2">"try"</span><span class="p">,</span> <span class="s2">"two"</span><span class="p">,</span>
+    <span class="s2">"use"</span><span class="p">,</span> <span class="s2">"van"</span><span class="p">,</span> <span class="s2">"via"</span><span class="p">,</span> <span class="s2">"war"</span><span class="p">,</span> <span class="s2">"was"</span><span class="p">,</span> <span class="s2">"way"</span><span class="p">,</span> <span class="s2">"web"</span><span class="p">,</span> <span class="s2">"wet"</span><span class="p">,</span> <span class="s2">"who"</span><span class="p">,</span> <span class="s2">"why"</span><span class="p">,</span> <span class="s2">"win"</span><span class="p">,</span> <span class="s2">"won"</span><span class="p">,</span> <span class="s2">"yes"</span><span class="p">,</span> <span class="s2">"yet"</span><span class="p">,</span> <span class="s2">"you"</span><span class="p">,</span> <span class="s2">"zoo"</span><span class="p">,</span>
+    <span class="s2">"go"</span><span class="p">,</span> <span class="s2">"do"</span><span class="p">,</span> <span class="s2">"so"</span><span class="p">,</span> <span class="s2">"to"</span><span class="p">,</span> <span class="s2">"in"</span><span class="p">,</span> <span class="s2">"on"</span><span class="p">,</span> <span class="s2">"at"</span><span class="p">,</span> <span class="s2">"by"</span><span class="p">,</span> <span class="s2">"of"</span><span class="p">,</span> <span class="s2">"or"</span><span class="p">,</span> <span class="s2">"up"</span><span class="p">,</span> <span class="s2">"if"</span><span class="p">,</span> <span class="s2">"my"</span><span class="p">,</span> <span class="s2">"me"</span><span class="p">,</span> <span class="s2">"we"</span><span class="p">,</span> <span class="s2">"he"</span><span class="p">,</span> <span class="s2">"be"</span><span class="p">,</span> <span class="s2">"hi"</span><span class="p">,</span> <span class="s2">"ok"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">_EN_CONTRACTIONS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"can't"</span><span class="p">:</span> <span class="s2">"cannot"</span><span class="p">,</span>
+    <span class="s2">"won't"</span><span class="p">:</span> <span class="s2">"will not"</span><span class="p">,</span>
+    <span class="s2">"shan't"</span><span class="p">:</span> <span class="s2">"shall not"</span><span class="p">,</span>
+    <span class="s2">"n't"</span><span class="p">:</span> <span class="s2">" not"</span><span class="p">,</span>
+    <span class="s2">"'re"</span><span class="p">:</span> <span class="s2">" are"</span><span class="p">,</span>
+    <span class="s2">"'ve"</span><span class="p">:</span> <span class="s2">" have"</span><span class="p">,</span>
+    <span class="s2">"'ll"</span><span class="p">:</span> <span class="s2">" will"</span><span class="p">,</span>
+    <span class="s2">"'m"</span><span class="p">:</span> <span class="s2">" am"</span><span class="p">,</span>
+    <span class="s2">"let's"</span><span class="p">:</span> <span class="s2">"let us"</span><span class="p">,</span>
+    <span class="s2">"it's"</span><span class="p">:</span> <span class="s2">"it is"</span><span class="p">,</span>
+    <span class="s2">"that's"</span><span class="p">:</span> <span class="s2">"that is"</span><span class="p">,</span>
+    <span class="s2">"what's"</span><span class="p">:</span> <span class="s2">"what is"</span><span class="p">,</span>
+    <span class="s2">"where's"</span><span class="p">:</span> <span class="s2">"where is"</span><span class="p">,</span>
+    <span class="s2">"there's"</span><span class="p">:</span> <span class="s2">"there is"</span><span class="p">,</span>
+    <span class="s2">"here's"</span><span class="p">:</span> <span class="s2">"here is"</span><span class="p">,</span>
+    <span class="s2">"who's"</span><span class="p">:</span> <span class="s2">"who is"</span><span class="p">,</span>
+    <span class="s2">"how's"</span><span class="p">:</span> <span class="s2">"how is"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">_EN_CONTRACTION_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">"\b(can't|won't|shan't|let's|it's|that's|what's|where's|there's|here's|who's|how's)\b"</span>
+    <span class="sa">r</span><span class="s2">"|(?&lt;=[A-Za-z])(n't|'re|'ve|'ll|'m)\b"</span><span class="p">,</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_expand_en_contractions</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_repl</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">_EN_CONTRACTIONS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_EN_CONTRACTION_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_repl</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="c1"># Possessive 's -&gt; s (e.g. John's -&gt; Johns)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?&lt;=[A-Za-z])'s\b"</span><span class="p">,</span> <span class="s2">"s"</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_should_spell_latin_token</span><span class="p">(</span><span class="n">word</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">full_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return True if a Latin token should be spelled out letter-by-letter."""</span>
+    <span class="n">lower</span> <span class="o">=</span> <span class="n">word</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="c1"># 1. Single letter (e.g., "แผน A", "เกรด B", "กลุ่ม C")</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># Keep English pronoun "I" or article "a" when adjacent to another English word</span>
+        <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"I"</span><span class="p">,</span> <span class="s2">"a"</span><span class="p">,</span> <span class="s2">"A"</span><span class="p">):</span>
+            <span class="n">before</span> <span class="o">=</span> <span class="n">full_text</span><span class="p">[:</span><span class="n">start</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+            <span class="n">after</span> <span class="o">=</span> <span class="n">full_text</span><span class="p">[</span><span class="n">end</span><span class="p">:]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span>
+            <span class="n">has_en_before</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">before</span> <span class="ow">and</span> <span class="n">before</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()</span> <span class="ow">and</span> <span class="n">before</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isascii</span><span class="p">())</span>
+            <span class="n">has_en_after</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">after</span> <span class="ow">and</span> <span class="n">after</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()</span> <span class="ow">and</span> <span class="n">after</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isascii</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"I"</span><span class="p">,</span> <span class="s2">"a"</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">has_en_before</span> <span class="ow">or</span> <span class="n">has_en_after</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">word</span> <span class="o">==</span> <span class="s2">"A"</span> <span class="ow">and</span> <span class="n">has_en_after</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="c1"># 2. Words with no English vowel letters (e.g., "SMS", "PDF", "LLM", "TTS", "BTS")</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="s2">"aeiouy"</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">lower</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="c1"># 3. Known initialisms/acronyms when written in uppercase (or case-insensitive for non-words)</span>
+    <span class="k">if</span> <span class="n">lower</span> <span class="ow">in</span> <span class="n">_SPELL_OUT_ACRONYMS</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span> <span class="ow">or</span> <span class="n">lower</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SHORT_ENGLISH_WORDS</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="c1"># 4. Short all-caps codes (2-3 letters like "AA", "AB", "UFA") not in common short words</span>
+    <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">lower</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SHORT_ENGLISH_WORDS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_spell_latin_residue</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spell_all</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Spell out Latin acronyms/codes Thai-style (A → เอ, B → บี) while</span>
+<span class="sd">    preserving pronounceable English words for English-to-Thai-IPA G2P.</span>
+<span class="sd">    """</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_repl</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">word</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">spell_all</span> <span class="ow">or</span> <span class="n">_should_spell_latin_token</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">m</span><span class="o">.</span><span class="n">start</span><span class="p">(),</span> <span class="n">m</span><span class="o">.</span><span class="n">end</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">LETTER_TO_THAI</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">word</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">word</span>
+
+    <span class="k">return</span> <span class="n">_LATIN_RESIDUE_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_repl</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_expand_symbols</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_SYMBOL_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">SYMBOLS</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)],</span> <span class="n">text</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_expand_english_abbrevs</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_ENGLISH_ABBREV_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">ENGLISH_ABBREVS</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()],</span> <span class="n">text</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_expand_units</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_UNIT_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">UNITS</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)],</span> <span class="n">text</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_expand_maiyamok</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">if</span> <span class="s2">"ๆ"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">text</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_expand_maiyamok_pythainlp</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_thai_numerals_to_arabic</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">thai</span><span class="p">,</span> <span class="n">arabic</span> <span class="ow">in</span> <span class="n">THAI_NUMERAL_MAP</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">thai</span><span class="p">,</span> <span class="n">arabic</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span>
+
+
+<div class="viewcode-block" id="normalize">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.normalize">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spell_latin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Normalize text for TTS: convert numbers, abbreviations, and special</span>
+<span class="sd">    characters to speakable Thai words.</span>
+
+<span class="sd">    :param str text: Input text</span>
+<span class="sd">    :param bool spell_latin: If True, spell all remaining Latin words letter-by-letter.</span>
+<span class="sd">        If False (default), only acronyms and single letters are spelled out,</span>
+<span class="sd">        leaving English words intact for English-to-Thai-IPA G2P.</span>
+<span class="sd">    """</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_maiyamok</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_thai_numerals_to_arabic</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_EMAIL_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_email_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_en_contractions</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_english_abbrevs</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_units</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_symbols</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_TIME_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_time_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_PHONE_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_phone_number_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_ALPHANUM_ID_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_alphanum_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_COMMA_NUMBER_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_strip_commas_and_convert</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_NUMBER_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_number_or_id_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_abbreviations</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_spell_latin_residue</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">spell_all</span><span class="o">=</span><span class="n">spell_latin</span><span class="p">)</span>
+    <span class="c1"># leftover hyphens (ชื่อ-นามสกุล) — connectors, not speakable tokens</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2017-2026, PyThaiTTS (Apache Software License 2.0).</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

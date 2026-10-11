@@ -1,20 +1,20 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pythaitts &mdash; PyThaiTTS 29193ba documentation</title>
+  <title>pythaitts &mdash; PyThaiTTS ac06fa8 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=22c4a2fd"></script>
-      <script src="../_static/doctools.js?v=888ff710"></script>
-      <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../_static/documentation_options.js?v=bd22de34"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -67,14 +67,20 @@
              
   <h1>Source code for pythaitts</h1><div class="highlight"><pre>
 <span></span><span class="c1"># -*- coding: utf-8 -*-</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">PyThaiTTS</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.7.0&quot;</span>
+<span class="sd">"""</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s2">"0.8.0"</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Iterator</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.preprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_text</span><span class="p">,</span> <span class="n">num_to_thai</span><span class="p">,</span> <span class="n">expand_maiyamok</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.fastthaig2p.en_g2p</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">EnglishG2P</span><span class="p">,</span>
+    <span class="n">en_g2p</span><span class="p">,</span>
+    <span class="n">en_ipa_to_thai_ipa</span><span class="p">,</span>
+    <span class="n">en_to_ipa</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.realtime</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">RealtimeTTS</span><span class="p">,</span>
     <span class="n">FastThaiG2PEngine</span><span class="p">,</span>
@@ -85,11 +91,15 @@
 <span class="p">)</span>
 
 
-<div class="viewcode-block" id="TTS"><a class="viewcode-back" href="../index.html#pythaitts.TTS">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TTS</span><span class="p">:</span>
-<div class="viewcode-block" id="TTS.__init__"><a class="viewcode-back" href="../index.html#pythaitts.TTS.__init__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pretrained</span><span class="o">=</span><span class="s2">&quot;fastthaig2p&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;last_checkpoint&quot;</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;1.0&quot;</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="TTS">
+<a class="viewcode-back" href="../index.html#pythaitts.TTS">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TTS</span><span class="p">:</span>
+<div class="viewcode-block" id="TTS.__init__">
+<a class="viewcode-back" href="../index.html#pythaitts.TTS.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pretrained</span><span class="o">=</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"last_checkpoint"</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1.0"</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        :param str pretrained: TTS pretrained (fastthaig2p, lunarlist_onnx, khanomtan, lunarlist, vachana)</span>
-<span class="sd">        :param str mode: pretrained mode (fastthaig2p, lunarlist_onnx, and vachana don&#39;t support)</span>
+<span class="sd">        :param str mode: pretrained mode (fastthaig2p, lunarlist_onnx, and vachana don't support)</span>
 <span class="sd">        :param str version: model version (default is 1.0 or 1.1)</span>
 <span class="sd">        :param str device: device for running model. (fastthaig2p, lunarlist_onnx, and vachana support CPU only.)</span>
 
@@ -101,7 +111,7 @@
 <span class="sd">        and `https://github.com/wannaphong/KhanomTan-TTS-v1.1 &lt;https://github.com/wannaphong/KhanomTan-TTS-v1.1&gt;`_</span>
 <span class="sd">        If you want to use khanomtan tts, you must to install coqui-tts before use the model by pip install coqui-tts.</span>
 <span class="sd">        </span>
-<span class="sd">        For lunarlist tts model, you must to install nemo before use the model by pip install nemo_toolkit[&#39;tts&#39;].</span>
+<span class="sd">        For lunarlist tts model, you must to install nemo before use the model by pip install nemo_toolkit['tts'].</span>
 <span class="sd">        You can see more about lunarlist tts at `https://link.medium.com/OpPjQis6wBb &lt;https://link.medium.com/OpPjQis6wBb&gt;`_</span>
 
 <span class="sd">        For lunarlist_onnx tts model, \</span>
@@ -112,38 +122,44 @@
 
 <span class="sd">        For fastthaig2p tts model, \</span>
 <span class="sd">        You can see more about fastthaig2p at `https://github.com/awslabs/FastThaiG2P &lt;https://github.com/awslabs/FastThaiG2P&gt;`_</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">=</span> <span class="n">pretrained</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load_pretrained</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="TTS.load_pretrained"><a class="viewcode-back" href="../index.html#pythaitts.TTS.load_pretrained">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_pretrained</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;1.0&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="TTS.load_pretrained">
+<a class="viewcode-back" href="../index.html#pythaitts.TTS.load_pretrained">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_pretrained</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1.0"</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Load pretrained</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;lunarlist_onnx&quot;</span><span class="p">:</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"lunarlist_onnx"</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.lunarlist_onnx</span><span class="w"> </span><span class="kn">import</span> <span class="n">LunarlistONNX</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">LunarlistONNX</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;khanomtan&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"khanomtan"</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.khanomtan_tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">KhanomTan</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">KhanomTan</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;lunarlist&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"lunarlist"</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.lunarlist_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LunarlistModel</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">LunarlistModel</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;vachana&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"vachana"</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.vachana_tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">VachanaTTS</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">VachanaTTS</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;fastthaig2p&quot;</span><span class="p">,</span> <span class="s2">&quot;FastThaiG2P&quot;</span><span class="p">):</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="s2">"FastThaiG2P"</span><span class="p">):</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.fastthaig2p</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastThaiG2P</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">FastThaiG2P</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                <span class="s2">&quot;PyThaiTTS doesn&#39;t support </span><span class="si">%s</span><span class="s2"> pretrained.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span>
+                <span class="s2">"PyThaiTTS doesn't support </span><span class="si">%s</span><span class="s2"> pretrained."</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span>
             <span class="p">)</span></div>
 
-<div class="viewcode-block" id="TTS.tts"><a class="viewcode-back" href="../index.html#pythaitts.TTS.tts">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">tts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;thai_som&quot;</span><span class="p">,</span> <span class="n">language_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;th-th&quot;</span><span class="p">,</span> <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">preprocess</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="TTS.tts">
+<a class="viewcode-back" href="../index.html#pythaitts.TTS.tts">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"thai_som"</span><span class="p">,</span> <span class="n">language_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"th-th"</span><span class="p">,</span> <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"file"</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">preprocess</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        speech synthesis</span>
 
 <span class="sd">        :param str text: text</span>
@@ -153,24 +169,24 @@
 <span class="sd">        :param str filename: path filename for save wav file if return_type is file.</span>
 <span class="sd">        :param bool preprocess: whether to preprocess text (convert numbers to Thai text and expand ๆ). Default is True.</span>
 <span class="sd">        :param kwargs: Additional parameters passed to the underlying model.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Preprocess text if requested</span>
         <span class="k">if</span> <span class="n">preprocess</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.preprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_text</span>
             <span class="n">text</span> <span class="o">=</span> <span class="n">preprocess_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;lunarlist&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;lunarlist_onnx&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"lunarlist"</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"lunarlist_onnx"</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span><span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">&quot;vachana&quot;</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;thai_som&quot;</span><span class="p">,</span> <span class="s2">&quot;Linda&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-                <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">&quot;th_f_1&quot;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"vachana"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"thai_som"</span><span class="p">,</span> <span class="s2">"Linda"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"th_f_1"</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span><span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span><span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;fastthaig2p&quot;</span><span class="p">,</span> <span class="s2">&quot;FastThaiG2P&quot;</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;Linda&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-                <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">&quot;thai_som&quot;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="s2">"FastThaiG2P"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"thai_som"</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span><span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span><span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;thai_som&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">&quot;Linda&quot;</span>
+        <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"thai_som"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"Linda"</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
             <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
             <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
@@ -179,31 +195,34 @@
             <span class="n">filename</span><span class="o">=</span><span class="n">filename</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="TTS.stream"><a class="viewcode-back" href="../index.html#pythaitts.TTS.stream">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">stream</span><span class="p">(</span>
+
+<div class="viewcode-block" id="TTS.stream">
+<a class="viewcode-back" href="../index.html#pythaitts.TTS.stream">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stream</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">text</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
-        <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;thai_som&quot;</span><span class="p">,</span>
-        <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;waveform&quot;</span><span class="p">,</span>
+        <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"thai_som"</span><span class="p">,</span>
+        <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"waveform"</span><span class="p">,</span>
         <span class="n">play</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">preprocess</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">max_phonemes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Stream speech synthesis in real-time.</span>
 
 <span class="sd">        :param Union[str, Iterable[str]] text: Input text or stream of text tokens (e.g. from LLM)</span>
-<span class="sd">        :param str speaker_idx: Voice to use (default: &quot;thai_som&quot; for fastthaig2p)</span>
-<span class="sd">        :param str return_type: Return format (&quot;waveform&quot;, &quot;bytes&quot;, &quot;raw&quot;, &quot;file&quot;)</span>
+<span class="sd">        :param str speaker_idx: Voice to use (default: "thai_som" for fastthaig2p)</span>
+<span class="sd">        :param str return_type: Return format ("waveform", "bytes", "raw", "file")</span>
 <span class="sd">        :param bool play: Whether to play audio chunks in real-time to speakers</span>
 <span class="sd">        :param bool preprocess: Whether to preprocess text (numbers to words, ๆ)</span>
 <span class="sd">        :param int max_phonemes: Maximum phonemes per synthesized chunk</span>
 <span class="sd">        :param kwargs: Additional parameters passed to the model</span>
 <span class="sd">        :return: Generator yielding audio chunks</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;fastthaig2p&quot;</span><span class="p">,</span> <span class="s2">&quot;FastThaiG2P&quot;</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;Linda&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-                <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">&quot;thai_som&quot;</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="s2">"FastThaiG2P"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"thai_som"</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
                 <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
                 <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
@@ -230,20 +249,26 @@
 
             <span class="k">return</span> <span class="n">_gen</span><span class="p">()</span></div>
 
+
     <span class="n">tts_stream</span> <span class="o">=</span> <span class="n">stream</span></div>
 
 
+
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;TTS&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;RealtimeTTS&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;FastThaiG2PEngine&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;PyThaiTTSEngine&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;RealtimeTTSEngine&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;preprocess_text&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;num_to_thai&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;expand_maiyamok&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;chunk_text&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;stream_text_to_chunks&quot;</span><span class="p">,</span>
+    <span class="s2">"TTS"</span><span class="p">,</span>
+    <span class="s2">"RealtimeTTS"</span><span class="p">,</span>
+    <span class="s2">"FastThaiG2PEngine"</span><span class="p">,</span>
+    <span class="s2">"PyThaiTTSEngine"</span><span class="p">,</span>
+    <span class="s2">"RealtimeTTSEngine"</span><span class="p">,</span>
+    <span class="s2">"EnglishG2P"</span><span class="p">,</span>
+    <span class="s2">"en_g2p"</span><span class="p">,</span>
+    <span class="s2">"en_to_ipa"</span><span class="p">,</span>
+    <span class="s2">"en_ipa_to_thai_ipa"</span><span class="p">,</span>
+    <span class="s2">"preprocess_text"</span><span class="p">,</span>
+    <span class="s2">"num_to_thai"</span><span class="p">,</span>
+    <span class="s2">"expand_maiyamok"</span><span class="p">,</span>
+    <span class="s2">"chunk_text"</span><span class="p">,</span>
+    <span class="s2">"stream_text_to_chunks"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 

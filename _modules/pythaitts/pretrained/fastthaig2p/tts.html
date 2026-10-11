@@ -1,0 +1,573 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pythaitts.pretrained.fastthaig2p.tts &mdash; PyThaiTTS ac06fa8 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=bd22de34"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            PyThaiTTS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">PyThaiTTS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../../../pythaitts.html">pythaitts</a></li>
+      <li class="breadcrumb-item active">pythaitts.pretrained.fastthaig2p.tts</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pythaitts.pretrained.fastthaig2p.tts</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Text-to-speech: Thai text in, audio out.</span>
+
+<span class="sd">Wraps G2P + a Thai-finetuned Kokoro-82M checkpoint (trained via</span>
+<span class="sd">https://github.com/cstorm125/kukuru-tts). Zero-arg TTS() downloads the</span>
+<span class="sd">released model; or pass paths to your own artifacts.</span>
+
+<span class="sd">Two backends, chosen by model file extension:</span>
+<span class="sd">  .onnx  — onnxruntime (default/recommended: no torch import, ~6s</span>
+<span class="sd">           lighter cold start; export via scripts/export_onnx.py)</span>
+<span class="sd">  .pth   — PyTorch KModel (needed for GPU inference)</span>
+
+<span class="sd">## License</span>
+
+<span class="sd">Copyright 2026 Charin Polpanumas and Amazon Web Services</span>
+
+<span class="sd">Licensed under the Apache License, Version 2.0 (the "License");</span>
+<span class="sd">you may not use this file except in compliance with the License.</span>
+<span class="sd">You may obtain a copy of the License at</span>
+
+<span class="sd">    http://www.apache.org/licenses/LICENSE-2.0</span>
+
+<span class="sd">Unless required by applicable law or agreed to in writing, software</span>
+<span class="sd">distributed under the License is distributed on an "AS IS" BASIS,</span>
+<span class="sd">WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="sd">See the License for the specific language governing permissions and</span>
+<span class="sd">limitations under the License.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">wave</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Iterator</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.g2p</span><span class="w"> </span><span class="kn">import</span> <span class="n">G2P</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.kokoro</span><span class="w"> </span><span class="kn">import</span> <span class="n">ipa_to_kokoro</span>
+
+
+<span class="c1"># Default model release — downloaded on first TTS() with no arguments.</span>
+<span class="c1"># Full 2-stage Thai fine-tune (stage 2 incl. adversarial phase).</span>
+<span class="n">_REPO</span> <span class="o">=</span> <span class="s2">"awslabs/FastThaiG2P"</span>
+<span class="n">_RELEASE_URL</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"https://github.com/</span><span class="si">{</span><span class="n">_REPO</span><span class="si">}</span><span class="s2">/releases/download/v0.3.0"</span>
+<span class="n">_DEFAULT_ASSETS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"model"</span><span class="p">:</span> <span class="s2">"kokoro_thai.onnx"</span><span class="p">,</span>
+    <span class="s2">"voicepack"</span><span class="p">:</span> <span class="s2">"thai_som.npy"</span><span class="p">,</span>  <span class="c1"># npy so the ONNX path needs no torch</span>
+    <span class="s2">"config"</span><span class="p">:</span> <span class="s2">"config.json"</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_default_asset</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the cached path of a default asset, downloading if missing.</span>
+
+<span class="sd">    Public repos need no auth. While the repo is private, set GITHUB_TOKEN</span>
+<span class="sd">    (repo scope) — the download then goes through the GitHub API.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
+
+    <span class="n">cache</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"FASTTHAIG2P_HOME"</span><span class="p">,</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">".cache"</span> <span class="o">/</span> <span class="s2">"fastthaig2p"</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">cache</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">_DEFAULT_ASSETS</span><span class="p">[</span><span class="n">kind</span><span class="p">]</span>
+    <span class="n">dest</span> <span class="o">=</span> <span class="n">cache</span> <span class="o">/</span> <span class="n">name</span>
+    <span class="k">if</span> <span class="n">dest</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">dest</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloading </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">dest</span><span class="si">}</span><span class="s2"> ..."</span><span class="p">)</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"GITHUB_TOKEN"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">token</span><span class="p">:</span>
+        <span class="c1"># resolve the asset id via the API, then fetch with octet-stream</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">json</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_json</span>
+
+        <span class="n">tag</span> <span class="o">=</span> <span class="n">_RELEASE_URL</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">api</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"https://api.github.com/repos/</span><span class="si">{</span><span class="n">_REPO</span><span class="si">}</span><span class="s2">/releases/tags/</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">api</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">"Authorization"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"token </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">"</span><span class="p">})</span>
+        <span class="n">release</span> <span class="o">=</span> <span class="n">_json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">))</span>
+        <span class="n">asset</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">release</span><span class="p">[</span><span class="s2">"assets"</span><span class="p">]</span> <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">==</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span>
+            <span class="n">asset</span><span class="p">[</span><span class="s2">"url"</span><span class="p">],</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">"Authorization"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"token </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="s2">"Accept"</span><span class="p">:</span> <span class="s2">"application/octet-stream"</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_RELEASE_URL</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">dest</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="n">dest</span><span class="o">.</span><span class="n">suffix</span> <span class="o">+</span> <span class="s2">".part"</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">)</span> <span class="k">as</span> <span class="n">r</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">chunk</span> <span class="o">:=</span> <span class="n">r</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">20</span><span class="p">):</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">urllib</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Could not download </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">code</span><span class="si">}</span><span class="s2">). If the repo is private, "</span>
+            <span class="s2">"set GITHUB_TOKEN, or pass explicit model/voicepack/config paths."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+    <span class="n">tmp</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dest</span>
+
+
+<div class="viewcode-block" id="TTS">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.tts.TTS">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TTS</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Thai TTS powered by FastThaiG2P + Kokoro-82M.</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        # Batteries included: downloads the default ONNX model, voicepack,</span>
+<span class="sd">        # and config to ~/.cache/fastthaig2p on first use (~330 MB)</span>
+<span class="sd">        tts = TTS()</span>
+
+<span class="sd">        # Or bring your own artifacts</span>
+<span class="sd">        tts = TTS("kokoro_thai.onnx", "thai_som.pt", config_path="config.json")</span>
+<span class="sd">        tts = TTS("kokoro_thai.pth", "thai_som.pt", config_path="config.json")  # GPU</span>
+
+<span class="sd">        tts.synthesize("สวัสดีครับ", "out.wav")</span>
+<span class="sd">        audio = tts.generate("สวัสดีครับ")  # float32 numpy, 24 kHz</span>
+<span class="sd">    """</span>
+
+    <span class="n">MAX_PHONEMES</span> <span class="o">=</span> <span class="mi">510</span>  <span class="c1"># Kokoro context limit (BOS/EOS excluded)</span>
+    <span class="n">SUPPORTED_VOICES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"thai_som"</span><span class="p">]</span>
+
+<div class="viewcode-block" id="TTS.__init__">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.tts.TTS.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">model_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">voicepack_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">config_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">speed</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">intra_op_threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">model_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">model_path</span> <span class="o">=</span> <span class="n">_default_asset</span><span class="p">(</span><span class="s2">"model"</span><span class="p">)</span>
+            <span class="n">voicepack_path</span> <span class="o">=</span> <span class="n">voicepack_path</span> <span class="ow">or</span> <span class="n">_default_asset</span><span class="p">(</span><span class="s2">"voicepack"</span><span class="p">)</span>
+            <span class="n">config_path</span> <span class="o">=</span> <span class="n">config_path</span> <span class="ow">or</span> <span class="n">_default_asset</span><span class="p">(</span><span class="s2">"config"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">voicepack_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"voicepack_path is required when model_path is given"</span><span class="p">)</span>
+        <span class="n">model_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+        <span class="n">voicepack_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">voicepack_path</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="n">voicepack_path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Not found: </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_onnx</span> <span class="o">=</span> <span class="n">model_path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">".onnx"</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onnx</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">config_path</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"config_path (vocab) is required with ONNX models"</span><span class="p">)</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">onnxruntime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ort</span>
+
+            <span class="n">options</span> <span class="o">=</span> <span class="n">ort</span><span class="o">.</span><span class="n">SessionOptions</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">intra_op_threads</span><span class="p">:</span>
+                <span class="n">options</span><span class="o">.</span><span class="n">intra_op_num_threads</span> <span class="o">=</span> <span class="n">intra_op_threads</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_session</span> <span class="o">=</span> <span class="n">ort</span><span class="o">.</span><span class="n">InferenceSession</span><span class="p">(</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">model_path</span><span class="p">),</span> <span class="n">options</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="p">[</span><span class="s2">"CPUExecutionProvider"</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_vocab</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)[</span><span class="s2">"vocab"</span><span class="p">]</span>
+            <span class="c1"># voicepack without torch: torch .pt zips are torch-only, so</span>
+            <span class="c1"># load lazily via numpy when possible, else fall back to torch</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_voice</span> <span class="o">=</span> <span class="n">_load_voicepack</span><span class="p">(</span><span class="n">voicepack_path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">kokoro</span><span class="w"> </span><span class="kn">import</span> <span class="n">KModel</span>
+
+            <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="s2">"cuda"</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">"cpu"</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">KModel</span><span class="p">(</span>
+                <span class="n">repo_id</span><span class="o">=</span><span class="s2">"hexgrad/Kokoro-82M"</span><span class="p">,</span>
+                <span class="n">config</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">config_path</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">model_path</span><span class="p">),</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_voice</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                <span class="n">voicepack_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="n">device</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_g2p</span> <span class="o">=</span> <span class="n">G2P</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span> <span class="o">=</span> <span class="mi">24000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">speed</span> <span class="o">=</span> <span class="n">speed</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_text_to_phonemes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ipa_to_kokoro</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_g2p</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+
+<div class="viewcode-block" id="TTS.generate">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.tts.TTS.generate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"np.ndarray"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Convert Thai text to float32 audio array (24 kHz mono)."""</span>
+        <span class="n">phonemes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_text_to_phonemes</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">phonemes</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">phonemes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_PHONEMES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Text produces </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">phonemes</span><span class="p">)</span><span class="si">}</span><span class="s2"> phonemes; max </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">MAX_PHONEMES</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="s2">"Split the input into shorter chunks."</span>
+            <span class="p">)</span>
+        <span class="n">ref_s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_voice</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">phonemes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onnx</span><span class="p">:</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_vocab</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">phonemes</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_vocab</span><span class="p">]</span>
+            <span class="n">input_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">ids</span><span class="p">,</span> <span class="mi">0</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+            <span class="n">ref</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ref_s</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">audio</span><span class="p">,</span> <span class="n">durations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="kc">None</span><span class="p">,</span>
+                <span class="p">{</span>
+                    <span class="s2">"input_ids"</span><span class="p">:</span> <span class="n">input_ids</span><span class="p">,</span>
+                    <span class="s2">"ref_s"</span><span class="p">:</span> <span class="n">ref</span><span class="p">,</span>
+                    <span class="s2">"speed"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">speed</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+                <span class="p">},</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">_trim_boundary_tokens</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">durations</span><span class="p">)</span>
+
+        <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+        <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">vocab</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">phonemes</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">vocab</span><span class="p">]</span>
+        <span class="n">input_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">LongTensor</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">ids</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+        <span class="n">ref_t</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">ref_s</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ref_s</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">ref_s</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">audio</span><span class="p">,</span> <span class="n">durations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">forward_with_tokens</span><span class="p">(</span>
+                <span class="n">input_ids</span><span class="p">,</span> <span class="n">ref_t</span><span class="p">,</span> <span class="n">speed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">speed</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">_trim_boundary_tokens</span><span class="p">(</span>
+            <span class="n">audio</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">durations</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TTS.synthesize">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.tts.TTS.synthesize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Convert Thai text to WAV file."""</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+        <span class="n">audio</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">audio_int16</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">32767</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">),</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">wf</span><span class="p">:</span>
+            <span class="n">wf</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">wf</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">wf</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">)</span>
+            <span class="n">wf</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">audio_int16</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">output_path</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"thai_som"</span><span class="p">,</span>
+        <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"file"</span><span class="p">,</span>
+        <span class="n">filename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Generate speech from text using FastThaiG2P TTS.</span>
+
+<span class="sd">        :param str text: Input text to synthesize</span>
+<span class="sd">        :param str speaker_idx: Voice to use (default: "thai_som" or path to custom voicepack)</span>
+<span class="sd">        :param str return_type: Return type ("file" or "waveform")</span>
+<span class="sd">        :param str filename: Output filename for the generated audio</span>
+<span class="sd">        :param kwargs: Additional parameters (e.g., speed)</span>
+<span class="sd">        :return: File path if return_type is "file", otherwise audio waveform data (numpy.ndarray)</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"thai_som"</span>
+
+        <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">SUPPORTED_VOICES</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">speaker_idx</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Unsupported voice '</span><span class="si">{</span><span class="n">speaker_idx</span><span class="si">}</span><span class="s2">'. Supported voices are: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SUPPORTED_VOICES</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">"speed"</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">speed</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">return_type</span> <span class="o">==</span> <span class="s2">"waveform"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+
+            <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">".wav"</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+                    <span class="n">filename</span> <span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">name</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TTS.stream">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.tts.TTS.stream">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stream</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"thai_som"</span><span class="p">,</span>
+        <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"waveform"</span><span class="p">,</span>
+        <span class="n">play</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">preprocess</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">max_phonemes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Stream Thai speech generation chunk by chunk in real-time.</span>
+
+<span class="sd">        :param Union[str, Iterable[str]] text: Input text or stream of text tokens (e.g. from LLM)</span>
+<span class="sd">        :param str speaker_idx: Voice to use (default: "thai_som" or path to custom voicepack)</span>
+<span class="sd">        :param str return_type: Return format ("waveform", "bytes", "raw", "file")</span>
+<span class="sd">        :param bool play: Whether to play audio chunks in real-time to speakers</span>
+<span class="sd">        :param bool preprocess: Whether to preprocess text (numbers to words, ๆ)</span>
+<span class="sd">        :param int max_phonemes: Maximum phonemes per synthesized chunk (default: 400)</span>
+<span class="sd">        :param kwargs: Additional parameters (e.g., speed)</span>
+<span class="sd">        :yield: Audio chunk (np.ndarray float32 waveform, int16 bytes, or wav file path)</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"thai_som"</span>
+
+        <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">SUPPORTED_VOICES</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">speaker_idx</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Unsupported voice '</span><span class="si">{</span><span class="n">speaker_idx</span><span class="si">}</span><span class="s2">'. Supported voices are: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SUPPORTED_VOICES</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+
+        <span class="n">orig_speed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">speed</span>
+        <span class="k">if</span> <span class="s2">"speed"</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">speed</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.realtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">_AudioPlayer</span><span class="p">,</span> <span class="n">stream_text_to_chunks</span>
+
+        <span class="n">player</span> <span class="o">=</span> <span class="n">_AudioPlayer</span><span class="p">(</span><span class="n">sample_rate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">)</span> <span class="k">if</span> <span class="n">play</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">chunks</span> <span class="o">=</span> <span class="n">stream_text_to_chunks</span><span class="p">(</span>
+                <span class="n">text</span><span class="p">,</span>
+                <span class="n">max_phonemes</span><span class="o">=</span><span class="n">max_phonemes</span><span class="p">,</span>
+                <span class="n">preprocess</span><span class="o">=</span><span class="n">preprocess</span><span class="p">,</span>
+                <span class="n">g2p_converter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_text_to_phonemes</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">chunks</span><span class="p">:</span>
+                <span class="n">audio</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">player</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">player</span><span class="o">.</span><span class="n">play</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">return_type</span> <span class="o">==</span> <span class="s2">"waveform"</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="n">audio</span>
+                <span class="k">elif</span> <span class="n">return_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"bytes"</span><span class="p">,</span> <span class="s2">"raw"</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">32767</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span>
+                <span class="k">elif</span> <span class="n">return_type</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
+                    <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+                    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">".wav"</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+                        <span class="n">temp_name</span> <span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">name</span>
+                    <span class="n">audio_int16</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">32767</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+                    <span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">temp_name</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">wf</span><span class="p">:</span>
+                        <span class="n">wf</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="n">wf</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+                        <span class="n">wf</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">)</span>
+                        <span class="n">wf</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">audio_int16</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
+                    <span class="k">yield</span> <span class="n">temp_name</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Unsupported return_type '</span><span class="si">{</span><span class="n">return_type</span><span class="si">}</span><span class="s2">'. Choose 'waveform', 'bytes', or 'file'."</span>
+                    <span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">player</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">player</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">speed</span> <span class="o">=</span> <span class="n">orig_speed</span></div>
+
+
+    <span class="n">tts_stream</span> <span class="o">=</span> <span class="n">stream</span></div>
+
+
+
+<span class="n">FastThaiG2P</span> <span class="o">=</span> <span class="n">TTS</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_trim_boundary_tokens</span><span class="p">(</span>
+    <span class="n">audio</span><span class="p">:</span> <span class="s2">"np.ndarray"</span><span class="p">,</span>
+    <span class="n">durations</span><span class="p">:</span> <span class="s2">"np.ndarray"</span><span class="p">,</span>
+    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24000</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"np.ndarray"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Remove the static generated for the BOS/EOS pad tokens.</span>
+
+<span class="sd">    Training pads every clip with token 0 aligned to zero samples, so at</span>
+<span class="sd">    inference the model fills the BOS token's ~400 ms with noise — often</span>
+<span class="sd">    including a faint hallucinated "ghost" copy of the first syllable —</span>
+<span class="sd">    before the real speech starts at the BOS boundary. A plain energy</span>
+<span class="sd">    onset detector latches onto that ghost, so instead we anchor at the</span>
+<span class="sd">    BOS boundary and walk backwards only while the audio stays *voiced*</span>
+<span class="sd">    (periodic and energetic, allowing short gaps): speech that genuinely</span>
+<span class="sd">    starts early connects to the boundary and is kept, while a</span>
+<span class="sd">    disconnected ghost blob is trimmed along with the static.</span>
+<span class="sd">    """</span>
+    <span class="n">total_frames</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">durations</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">total_frames</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">audio</span>
+    <span class="n">samples_per_frame</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_frames</span>
+    <span class="n">bos_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">durations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">samples_per_frame</span><span class="p">)</span>
+    <span class="n">eos_start</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">durations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">samples_per_frame</span><span class="p">)</span>
+
+    <span class="n">win</span> <span class="o">=</span> <span class="n">sample_rate</span> <span class="o">//</span> <span class="mi">100</span>  <span class="c1"># 10 ms windows</span>
+    <span class="n">n_win</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span> <span class="o">//</span> <span class="n">win</span>
+    <span class="k">if</span> <span class="n">n_win</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">audio</span>
+    <span class="n">frames</span> <span class="o">=</span> <span class="n">audio</span><span class="p">[:</span> <span class="n">n_win</span> <span class="o">*</span> <span class="n">win</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_win</span><span class="p">,</span> <span class="n">win</span><span class="p">)</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">frames</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">threshold</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">*</span> <span class="mf">0.1</span>  <span class="c1"># -20 dB relative to peak</span>
+
+    <span class="c1"># Voicing per window: normalized autocorrelation peak in the pitch</span>
+    <span class="c1"># range (60-400 Hz). Ghost static sits ~0.2; voiced speech &gt;0.5.</span>
+    <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">sample_rate</span> <span class="o">//</span> <span class="mi">400</span><span class="p">,</span> <span class="n">sample_rate</span> <span class="o">//</span> <span class="mi">60</span>
+    <span class="n">centered</span> <span class="o">=</span> <span class="n">frames</span> <span class="o">-</span> <span class="n">frames</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">speech</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_win</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">env</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">centered</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">ac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">correlate</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="s2">"full"</span><span class="p">)[</span><span class="n">win</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">:]</span>
+        <span class="k">if</span> <span class="n">ac</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">1e-9</span> <span class="ow">and</span> <span class="n">ac</span><span class="p">[</span><span class="n">lo</span><span class="p">:</span><span class="n">hi</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">/</span> <span class="n">ac</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="n">speech</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="n">max_gap</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># bridge unvoiced stretches up to 50 ms (stops, fricatives)</span>
+    <span class="n">margin</span> <span class="o">=</span> <span class="n">sample_rate</span> <span class="o">//</span> <span class="mi">40</span>  <span class="c1"># 25 ms of natural attack/decay</span>
+
+    <span class="c1"># Head: from the BOS boundary, extend backwards through voiced audio.</span>
+    <span class="n">anchor</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">bos_end</span> <span class="o">//</span> <span class="n">win</span><span class="p">,</span> <span class="n">n_win</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">first_speech</span> <span class="o">=</span> <span class="n">anchor</span>
+    <span class="n">gap</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">anchor</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">speech</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">first_speech</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="n">gap</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">gap</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">gap</span> <span class="o">&gt;</span> <span class="n">max_gap</span><span class="p">:</span>
+                <span class="k">break</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">first_speech</span> <span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="n">bos_end</span><span class="p">)</span> <span class="o">-</span> <span class="n">margin</span><span class="p">)</span>
+
+    <span class="c1"># Tail: mirror from the EOS boundary forwards through voiced audio.</span>
+    <span class="n">anchor</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">eos_start</span> <span class="o">//</span> <span class="n">win</span><span class="p">,</span> <span class="n">n_win</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">last_speech</span> <span class="o">=</span> <span class="n">anchor</span>
+    <span class="n">gap</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">anchor</span><span class="p">,</span> <span class="n">n_win</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">speech</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">last_speech</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="n">gap</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">gap</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">gap</span> <span class="o">&gt;</span> <span class="n">max_gap</span><span class="p">:</span>
+                <span class="k">break</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">last_speech</span> <span class="o">*</span> <span class="n">win</span> <span class="o">+</span> <span class="n">win</span><span class="p">,</span> <span class="n">eos_start</span><span class="p">)</span> <span class="o">+</span> <span class="n">margin</span><span class="p">)</span>
+
+    <span class="n">trimmed</span> <span class="o">=</span> <span class="n">audio</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">fade</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">//</span> <span class="mi">100</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">trimmed</span><span class="p">))</span>  <span class="c1"># 10 ms</span>
+    <span class="k">if</span> <span class="n">fade</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">ramp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">fade</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">trimmed</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">trimmed</span><span class="p">[:</span><span class="n">fade</span><span class="p">]</span> <span class="o">*=</span> <span class="n">ramp</span>
+        <span class="n">trimmed</span><span class="p">[</span><span class="o">-</span><span class="n">fade</span><span class="p">:]</span> <span class="o">*=</span> <span class="n">ramp</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">trimmed</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_voicepack</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"np.ndarray"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Load a [510, 1, 256] voicepack as numpy. .npy needs no torch;</span>
+<span class="sd">    torch-serialized .pt files require torch (install fastthaig2p[tts-torch]</span>
+<span class="sd">    or convert once: np.save(p.with_suffix('.npy'), torch.load(p).numpy())."""</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">".npy"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is a torch-serialized voicepack but torch is not "</span>
+            <span class="s2">"installed. Use a .npy voicepack (the default download is one), "</span>
+            <span class="s2">"or pip install 'fastthaig2p[tts-torch]'."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2017-2026, PyThaiTTS (Apache Software License 2.0).</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

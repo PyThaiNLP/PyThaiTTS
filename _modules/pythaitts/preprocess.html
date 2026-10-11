@@ -1,20 +1,20 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pythaitts.preprocess &mdash; PyThaiTTS 29193ba documentation</title>
+  <title>pythaitts.preprocess &mdash; PyThaiTTS ac06fa8 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=22c4a2fd"></script>
-      <script src="../../_static/doctools.js?v=888ff710"></script>
-      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../_static/documentation_options.js?v=bd22de34"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -68,59 +68,59 @@
              
   <h1>Source code for pythaitts.preprocess</h1><div class="highlight"><pre>
 <span></span><span class="c1"># -*- coding: utf-8 -*-</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Thai Text Preprocessing for TTS</span>
 
 <span class="sd">This module provides text preprocessing functions for Thai Text-to-Speech,</span>
 <span class="sd">including number to Thai text conversion and handling of Thai repetition character (ๆ).</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 
 
 <span class="c1"># Thai number words</span>
-<span class="n">THAI_ONES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;หนึ่ง&quot;</span><span class="p">,</span> <span class="s2">&quot;สอง&quot;</span><span class="p">,</span> <span class="s2">&quot;สาม&quot;</span><span class="p">,</span> <span class="s2">&quot;สี่&quot;</span><span class="p">,</span> <span class="s2">&quot;ห้า&quot;</span><span class="p">,</span> <span class="s2">&quot;หก&quot;</span><span class="p">,</span> <span class="s2">&quot;เจ็ด&quot;</span><span class="p">,</span> <span class="s2">&quot;แปด&quot;</span><span class="p">,</span> <span class="s2">&quot;เก้า&quot;</span><span class="p">]</span>
-<span class="n">THAI_TENS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;สิบ&quot;</span><span class="p">,</span> <span class="s2">&quot;ยี่สิบ&quot;</span><span class="p">,</span> <span class="s2">&quot;สามสิบ&quot;</span><span class="p">,</span> <span class="s2">&quot;สี่สิบ&quot;</span><span class="p">,</span> <span class="s2">&quot;ห้าสิบ&quot;</span><span class="p">,</span> <span class="s2">&quot;หกสิบ&quot;</span><span class="p">,</span> <span class="s2">&quot;เจ็ดสิบ&quot;</span><span class="p">,</span> <span class="s2">&quot;แปดสิบ&quot;</span><span class="p">,</span> <span class="s2">&quot;เก้าสิบ&quot;</span><span class="p">]</span>
+<span class="n">THAI_ONES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"หนึ่ง"</span><span class="p">,</span> <span class="s2">"สอง"</span><span class="p">,</span> <span class="s2">"สาม"</span><span class="p">,</span> <span class="s2">"สี่"</span><span class="p">,</span> <span class="s2">"ห้า"</span><span class="p">,</span> <span class="s2">"หก"</span><span class="p">,</span> <span class="s2">"เจ็ด"</span><span class="p">,</span> <span class="s2">"แปด"</span><span class="p">,</span> <span class="s2">"เก้า"</span><span class="p">]</span>
+<span class="n">THAI_TENS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"สิบ"</span><span class="p">,</span> <span class="s2">"ยี่สิบ"</span><span class="p">,</span> <span class="s2">"สามสิบ"</span><span class="p">,</span> <span class="s2">"สี่สิบ"</span><span class="p">,</span> <span class="s2">"ห้าสิบ"</span><span class="p">,</span> <span class="s2">"หกสิบ"</span><span class="p">,</span> <span class="s2">"เจ็ดสิบ"</span><span class="p">,</span> <span class="s2">"แปดสิบ"</span><span class="p">,</span> <span class="s2">"เก้าสิบ"</span><span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_num_to_thai_under_hundred</span><span class="p">(</span><span class="n">num</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert numbers 0-99 to Thai text.</span>
 <span class="sd">    </span>
 <span class="sd">    :param int num: Number to convert (0-99)</span>
 <span class="sd">    :return: Thai text representation</span>
 <span class="sd">    :rtype: str</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">num</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;ศูนย์&quot;</span>
+        <span class="k">return</span> <span class="s2">"ศูนย์"</span>
     <span class="k">elif</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">num</span><span class="p">]</span>
     <span class="k">elif</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">20</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">num</span> <span class="o">==</span> <span class="mi">10</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;สิบ&quot;</span>
+            <span class="k">return</span> <span class="s2">"สิบ"</span>
         <span class="k">elif</span> <span class="n">num</span> <span class="o">==</span> <span class="mi">11</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;สิบเอ็ด&quot;</span>
+            <span class="k">return</span> <span class="s2">"สิบเอ็ด"</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;สิบ&quot;</span> <span class="o">+</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">num</span> <span class="o">%</span> <span class="mi">10</span><span class="p">]</span>
+            <span class="k">return</span> <span class="s2">"สิบ"</span> <span class="o">+</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">num</span> <span class="o">%</span> <span class="mi">10</span><span class="p">]</span>
     <span class="k">elif</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">:</span>
         <span class="n">tens</span> <span class="o">=</span> <span class="n">num</span> <span class="o">//</span> <span class="mi">10</span>
         <span class="n">ones</span> <span class="o">=</span> <span class="n">num</span> <span class="o">%</span> <span class="mi">10</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_TENS</span><span class="p">[</span><span class="n">tens</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">ones</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">+=</span> <span class="s2">&quot;เอ็ด&quot;</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="s2">"เอ็ด"</span>
         <span class="k">elif</span> <span class="n">ones</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">ones</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">result</span>
-    <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">""</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_num_to_thai_under_thousand</span><span class="p">(</span><span class="n">num</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert numbers 0-999 to Thai text.</span>
 <span class="sd">    </span>
 <span class="sd">    :param int num: Number to convert (0-999)</span>
 <span class="sd">    :return: Thai text representation</span>
 <span class="sd">    :rtype: str</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_num_to_thai_under_hundred</span><span class="p">(</span><span class="n">num</span><span class="p">)</span>
     
@@ -128,11 +128,11 @@
     <span class="n">remainder</span> <span class="o">=</span> <span class="n">num</span> <span class="o">%</span> <span class="mi">100</span>
     
     <span class="k">if</span> <span class="n">hundreds</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;หนึ่งร้อย&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s2">"หนึ่งร้อย"</span>
     <span class="k">elif</span> <span class="n">hundreds</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;สองร้อย&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s2">"สองร้อย"</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">hundreds</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;ร้อย&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">hundreds</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"ร้อย"</span>
     
     <span class="k">if</span> <span class="n">remainder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">result</span> <span class="o">+=</span> <span class="n">_num_to_thai_under_hundred</span><span class="p">(</span><span class="n">remainder</span><span class="p">)</span>
@@ -140,29 +140,31 @@
     <span class="k">return</span> <span class="n">result</span>
 
 
-<div class="viewcode-block" id="num_to_thai"><a class="viewcode-back" href="../../index.html#pythaitts.num_to_thai">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">num_to_thai</span><span class="p">(</span><span class="n">num_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="num_to_thai">
+<a class="viewcode-back" href="../../index.html#pythaitts.num_to_thai">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">num_to_thai</span><span class="p">(</span><span class="n">num_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert number string to Thai text.</span>
 <span class="sd">    Supports integers and decimals.</span>
 <span class="sd">    </span>
-<span class="sd">    :param str num_str: Number string to convert (e.g., &quot;123&quot;, &quot;1234&quot;, &quot;12.5&quot;)</span>
+<span class="sd">    :param str num_str: Number string to convert (e.g., "123", "1234", "12.5")</span>
 <span class="sd">    :return: Thai text representation</span>
 <span class="sd">    :rtype: str</span>
 <span class="sd">    </span>
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; num_to_thai(&quot;0&quot;)</span>
-<span class="sd">        &#39;ศูนย์&#39;</span>
-<span class="sd">        &gt;&gt;&gt; num_to_thai(&quot;123&quot;)</span>
-<span class="sd">        &#39;หนึ่งร้อยยี่สิบสาม&#39;</span>
-<span class="sd">        &gt;&gt;&gt; num_to_thai(&quot;1000&quot;)</span>
-<span class="sd">        &#39;หนึ่งพัน&#39;</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        &gt;&gt;&gt; num_to_thai("0")</span>
+<span class="sd">        'ศูนย์'</span>
+<span class="sd">        &gt;&gt;&gt; num_to_thai("123")</span>
+<span class="sd">        'หนึ่งร้อยยี่สิบสาม'</span>
+<span class="sd">        &gt;&gt;&gt; num_to_thai("1000")</span>
+<span class="sd">        'หนึ่งพัน'</span>
+<span class="sd">    """</span>
     <span class="c1"># Handle decimal numbers</span>
-    <span class="k">if</span> <span class="s1">&#39;.&#39;</span> <span class="ow">in</span> <span class="n">num_str</span><span class="p">:</span>
-        <span class="n">integer_part</span><span class="p">,</span> <span class="n">decimal_part</span> <span class="o">=</span> <span class="n">num_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">num_to_thai</span><span class="p">(</span><span class="n">integer_part</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;จุด&quot;</span>
+    <span class="k">if</span> <span class="s1">'.'</span> <span class="ow">in</span> <span class="n">num_str</span><span class="p">:</span>
+        <span class="n">integer_part</span><span class="p">,</span> <span class="n">decimal_part</span> <span class="o">=</span> <span class="n">num_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'.'</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">num_to_thai</span><span class="p">(</span><span class="n">integer_part</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"จุด"</span>
         <span class="k">for</span> <span class="n">digit</span> <span class="ow">in</span> <span class="n">decimal_part</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">digit</span><span class="p">)]</span> <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">digit</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;ศูนย์&quot;</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">digit</span><span class="p">)]</span> <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">digit</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">"ศูนย์"</span>
         <span class="k">return</span> <span class="n">result</span>
     
     <span class="c1"># Convert to integer</span>
@@ -172,10 +174,10 @@
         <span class="k">return</span> <span class="n">num_str</span>  <span class="c1"># Return original if cannot convert</span>
     
     <span class="k">if</span> <span class="n">num</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;ศูนย์&quot;</span>
+        <span class="k">return</span> <span class="s2">"ศูนย์"</span>
     
     <span class="k">if</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;ลบ&quot;</span> <span class="o">+</span> <span class="n">num_to_thai</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="o">-</span><span class="n">num</span><span class="p">))</span>
+        <span class="k">return</span> <span class="s2">"ลบ"</span> <span class="o">+</span> <span class="n">num_to_thai</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="o">-</span><span class="n">num</span><span class="p">))</span>
     
     <span class="c1"># Handle numbers by magnitude</span>
     <span class="k">if</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">:</span>
@@ -183,7 +185,7 @@
     <span class="k">elif</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">10000</span><span class="p">:</span>
         <span class="n">thousands</span> <span class="o">=</span> <span class="n">num</span> <span class="o">//</span> <span class="mi">1000</span>
         <span class="n">remainder</span> <span class="o">=</span> <span class="n">num</span> <span class="o">%</span> <span class="mi">1000</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;พัน&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"พัน"</span>
         <span class="k">if</span> <span class="n">remainder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">+=</span> <span class="n">_num_to_thai_under_thousand</span><span class="p">(</span><span class="n">remainder</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span>
@@ -191,15 +193,15 @@
         <span class="n">ten_thousands</span> <span class="o">=</span> <span class="n">num</span> <span class="o">//</span> <span class="mi">10000</span>
         <span class="n">remainder</span> <span class="o">=</span> <span class="n">num</span> <span class="o">%</span> <span class="mi">10000</span>
         <span class="k">if</span> <span class="n">ten_thousands</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;หนึ่งหมื่น&quot;</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="s2">"หนึ่งหมื่น"</span>
         <span class="k">elif</span> <span class="n">ten_thousands</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;สองหมื่น&quot;</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="s2">"สองหมื่น"</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">ten_thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;หมื่น&quot;</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">ten_thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"หมื่น"</span>
         <span class="k">if</span> <span class="n">remainder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">thousands</span> <span class="o">=</span> <span class="n">remainder</span> <span class="o">//</span> <span class="mi">1000</span>
             <span class="k">if</span> <span class="n">thousands</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;พัน&quot;</span>
+                <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"พัน"</span>
             <span class="n">remainder</span> <span class="o">=</span> <span class="n">remainder</span> <span class="o">%</span> <span class="mi">1000</span>
             <span class="k">if</span> <span class="n">remainder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">result</span> <span class="o">+=</span> <span class="n">_num_to_thai_under_thousand</span><span class="p">(</span><span class="n">remainder</span><span class="p">)</span>
@@ -207,15 +209,15 @@
     <span class="k">elif</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">1000000</span><span class="p">:</span>
         <span class="n">hundred_thousands</span> <span class="o">=</span> <span class="n">num</span> <span class="o">//</span> <span class="mi">100000</span>
         <span class="n">remainder</span> <span class="o">=</span> <span class="n">num</span> <span class="o">%</span> <span class="mi">100000</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">hundred_thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;แสน&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">hundred_thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"แสน"</span>
         <span class="k">if</span> <span class="n">remainder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">ten_thousands</span> <span class="o">=</span> <span class="n">remainder</span> <span class="o">//</span> <span class="mi">10000</span>
             <span class="k">if</span> <span class="n">ten_thousands</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">ten_thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;หมื่น&quot;</span>
+                <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">ten_thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"หมื่น"</span>
             <span class="n">remainder</span> <span class="o">=</span> <span class="n">remainder</span> <span class="o">%</span> <span class="mi">10000</span>
             <span class="n">thousands</span> <span class="o">=</span> <span class="n">remainder</span> <span class="o">//</span> <span class="mi">1000</span>
             <span class="k">if</span> <span class="n">thousands</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;พัน&quot;</span>
+                <span class="n">result</span> <span class="o">+=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">thousands</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"พัน"</span>
             <span class="n">remainder</span> <span class="o">=</span> <span class="n">remainder</span> <span class="o">%</span> <span class="mi">1000</span>
             <span class="k">if</span> <span class="n">remainder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">result</span> <span class="o">+=</span> <span class="n">_num_to_thai_under_thousand</span><span class="p">(</span><span class="n">remainder</span><span class="p">)</span>
@@ -223,7 +225,7 @@
     <span class="k">elif</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">10000000</span><span class="p">:</span>
         <span class="n">millions</span> <span class="o">=</span> <span class="n">num</span> <span class="o">//</span> <span class="mi">1000000</span>
         <span class="n">remainder</span> <span class="o">=</span> <span class="n">num</span> <span class="o">%</span> <span class="mi">1000000</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">millions</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;ล้าน&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">THAI_ONES</span><span class="p">[</span><span class="n">millions</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"ล้าน"</span>
         <span class="k">if</span> <span class="n">remainder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">+=</span> <span class="n">num_to_thai</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">remainder</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">result</span>
@@ -231,14 +233,17 @@
         <span class="c1"># For very large numbers, use a simple approach</span>
         <span class="n">millions</span> <span class="o">=</span> <span class="n">num</span> <span class="o">//</span> <span class="mi">1000000</span>
         <span class="n">remainder</span> <span class="o">=</span> <span class="n">num</span> <span class="o">%</span> <span class="mi">1000000</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">num_to_thai</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">millions</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot;ล้าน&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">num_to_thai</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">millions</span><span class="p">))</span> <span class="o">+</span> <span class="s2">"ล้าน"</span>
         <span class="k">if</span> <span class="n">remainder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">+=</span> <span class="n">num_to_thai</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">remainder</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
 
-<div class="viewcode-block" id="expand_maiyamok"><a class="viewcode-back" href="../../index.html#pythaitts.expand_maiyamok">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">expand_maiyamok</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="expand_maiyamok">
+<a class="viewcode-back" href="../../index.html#pythaitts.expand_maiyamok">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">expand_maiyamok</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Expand Thai repetition character (ๆ) by repeating the previous word or syllable.</span>
 <span class="sd">    </span>
 <span class="sd">    The mai yamok (ๆ) is a Thai repetition mark that indicates the previous </span>
@@ -249,27 +254,27 @@
 <span class="sd">    :rtype: str</span>
 <span class="sd">    </span>
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; expand_maiyamok(&quot;ช้าๆ&quot;)</span>
-<span class="sd">        &#39;ช้าช้า&#39;</span>
-<span class="sd">        &gt;&gt;&gt; expand_maiyamok(&quot;ดีๆ&quot;)</span>
-<span class="sd">        &#39;ดีดี&#39;</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="s1">&#39;ๆ&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+<span class="sd">        &gt;&gt;&gt; expand_maiyamok("ช้าๆ")</span>
+<span class="sd">        'ช้าช้า'</span>
+<span class="sd">        &gt;&gt;&gt; expand_maiyamok("ดีๆ")</span>
+<span class="sd">        'ดีดี'</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="s1">'ๆ'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">text</span>
     
     <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">text</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;ๆ&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">text</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'ๆ'</span><span class="p">:</span>
             <span class="c1"># Find the previous word/syllable to repeat</span>
             <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
                 <span class="c1"># Look back to find the word to repeat</span>
                 <span class="c1"># Thai words are typically separated by spaces or are continuous</span>
-                <span class="c1"># We&#39;ll repeat the last word or syllable</span>
-                <span class="n">prev_text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+                <span class="c1"># We'll repeat the last word or syllable</span>
+                <span class="n">prev_text</span> <span class="o">=</span> <span class="s1">''</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
                 
                 <span class="c1"># Find the last word (sequence of Thai characters)</span>
-                <span class="n">thai_char_pattern</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;[ก-๙]+&#39;</span>
+                <span class="n">thai_char_pattern</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">'[ก-๙]+'</span>
                 <span class="n">matches</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">thai_char_pattern</span><span class="p">,</span> <span class="n">prev_text</span><span class="p">))</span>
                 <span class="k">if</span> <span class="n">matches</span><span class="p">:</span>
                     <span class="n">last_match</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -283,11 +288,14 @@
             <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
     
-    <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="s1">''</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="preprocess_text"><a class="viewcode-back" href="../../index.html#pythaitts.preprocess_text">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">preprocess_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expand_numbers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">expand_maiyamok_char</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="preprocess_text">
+<a class="viewcode-back" href="../../index.html#pythaitts.preprocess_text">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">preprocess_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expand_numbers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">expand_maiyamok_char</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Preprocess Thai text for TTS by converting numbers to text and expanding ๆ.</span>
 <span class="sd">    </span>
 <span class="sd">    :param str text: Input text to preprocess</span>
@@ -297,13 +305,13 @@
 <span class="sd">    :rtype: str</span>
 <span class="sd">    </span>
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; preprocess_text(&quot;ฉันมี 123 บาท&quot;)</span>
-<span class="sd">        &#39;ฉันมี หนึ่งร้อยยี่สิบสาม บาท&#39;</span>
-<span class="sd">        &gt;&gt;&gt; preprocess_text(&quot;ดีๆ&quot;)</span>
-<span class="sd">        &#39;ดีดี&#39;</span>
-<span class="sd">        &gt;&gt;&gt; preprocess_text(&quot;มี 5 คนๆ&quot;)</span>
-<span class="sd">        &#39;มี ห้า คนคน&#39;</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        &gt;&gt;&gt; preprocess_text("ฉันมี 123 บาท")</span>
+<span class="sd">        'ฉันมี หนึ่งร้อยยี่สิบสาม บาท'</span>
+<span class="sd">        &gt;&gt;&gt; preprocess_text("ดีๆ")</span>
+<span class="sd">        'ดีดี'</span>
+<span class="sd">        &gt;&gt;&gt; preprocess_text("มี 5 คนๆ")</span>
+<span class="sd">        'มี ห้า คนคน'</span>
+<span class="sd">    """</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">text</span>
     
     <span class="c1"># Expand mai yamok (ๆ) first</span>
@@ -318,9 +326,10 @@
         
         <span class="c1"># Match integers and decimals, including optional negative sign</span>
         <span class="c1"># Handles: -5, 123, 123.45</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;-?\d+(?:\.\d+)?&#39;</span><span class="p">,</span> <span class="n">replace_number</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">'-?\d+(?:\.\d+)?'</span><span class="p">,</span> <span class="n">replace_number</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
     
     <span class="k">return</span> <span class="n">result</span></div>
+
 </pre></div>
 
            </div>
