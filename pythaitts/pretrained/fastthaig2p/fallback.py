@@ -76,11 +76,19 @@ def _tltk_syllable_to_ipa(syl: str) -> str:
     return result + tone
 
 
+_EN_WORD_RE = re.compile(r"^[A-Za-z']+$")
+
+
 def fallback_g2p(word: str) -> str:
     """Generate IPA for a word using rule-based G2P fallback.
 
     Returns IPA in Wiktionary convention: /syl.la.ble˧/
     """
+    if _EN_WORD_RE.match(word):
+        from .en_g2p import en_g2p
+
+        return en_g2p(word)
+
     result = _th2ipa.g2p(word)
     match = _TLTK_PHON_RE.search(result)
     if not match:

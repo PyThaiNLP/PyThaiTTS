@@ -7,6 +7,12 @@ __version__ = "0.7.0"
 from typing import Union, Iterable, Iterator
 
 from pythaitts.preprocess import preprocess_text, num_to_thai, expand_maiyamok
+from pythaitts.pretrained.fastthaig2p.en_g2p import (
+    EnglishG2P,
+    en_g2p,
+    en_ipa_to_thai_ipa,
+    en_to_ipa,
+)
 from pythaitts.realtime import (
     RealtimeTTS,
     FastThaiG2PEngine,
@@ -171,6 +177,10 @@ __all__ = [
     "FastThaiG2PEngine",
     "PyThaiTTSEngine",
     "RealtimeTTSEngine",
+    "EnglishG2P",
+    "en_g2p",
+    "en_to_ipa",
+    "en_ipa_to_thai_ipa",
     "preprocess_text",
     "num_to_thai",
     "expand_maiyamok",
