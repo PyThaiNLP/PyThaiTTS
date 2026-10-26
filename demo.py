@@ -41,6 +41,13 @@ def main():
         print(f"✓ Waveform generated successfully!")
         print(f"Waveform shape: {waveform.shape}")
         print()
+
+        # Demonstrate custom word pronunciation dictionary
+        print("Demonstrating custom word pronunciation dictionary...")
+        custom_dict = {"พายไทยทีทีเอส": "พาย-ไทย-ที-ที-เอส"}
+        waveform_custom = tts.tts(text, custom_dict=custom_dict, return_type="waveform")
+        print(f"✓ Custom pronunciation waveform generated! Shape: {waveform_custom.shape}")
+        print()
         
         print("=" * 60)
         print("Demo completed successfully!")

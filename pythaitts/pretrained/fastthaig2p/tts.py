@@ -130,6 +130,7 @@ class TTS:
         device: Optional[str] = None,
         speed: float = 1.0,
         intra_op_threads: int = 0,
+        custom_dict: Optional[Union[dict[str, str], str, Path, Iterable]] = None,
     ):
         if model_path is None:
             model_path = _default_asset("model")
@@ -176,15 +177,36 @@ class TTS:
             )
             self._device = device
 
-        self._g2p = G2P()
+        self._g2p = G2P(custom_dict=custom_dict)
         self.sample_rate = 24000
         self.speed = speed
 
-    def _text_to_phonemes(self, text: str) -> str:
-        return ipa_to_kokoro(self._g2p.convert(text))
+    def add_custom_dict(
+        self, custom_dict: Union[dict[str, str], str, Path, Iterable]
+    ) -> None:
+        """Add custom word pronunciations to the underlying G2P engine."""
+        self._g2p.add_custom_dict(custom_dict)
 
-    def generate(self, text: str) -> "np.ndarray":
+    def set_custom_dict(
+        self, custom_dict: Union[dict[str, str], str, Path, Iterable]
+    ) -> None:
+        """Replace all custom word pronunciations in the underlying G2P engine."""
+        self._g2p.set_custom_dict(custom_dict)
+
+    def _text_to_phonemes(
+        self,
+        text: str,
+        custom_dict: Optional[Union[dict[str, str], str, Path, Iterable]] = None,
+    ) -> str:
+        return ipa_to_kokoro(self._g2p.convert(text, custom_dict=custom_dict))
+
+    def generate(
+        self,
+        text: str,
+        custom_dict: Optional[Union[dict[str, str], str, Path, Iterable]] = None,
+    ) -> "np.ndarray":
         """Convert Thai text to float32 audio array (24 kHz mono)."""
+        phonemes = self._text_to_phonemes(text, custom_dict=custom_dict)
         phonemes = self._text_to_phonemes(text)
         if not phonemes:
             return np.array([], dtype=np.float32)
@@ -225,10 +247,15 @@ class TTS:
             audio.cpu().numpy(), durations.cpu().numpy()
         )
 
-    def synthesize(self, text: str, output_path: str | Path) -> Path:
+    def synthesize(
+        self,
+        text: str,
+        output_path: str | Path,
+        custom_dict: Optional[Union[dict[str, str], str, Path, Iterable]] = None,
+    ) -> Path:
         """Convert Thai text to WAV file."""
         output_path = Path(output_path)
-        audio = self.generate(text)
+        audio = self.generate(text, custom_dict=custom_dict)
         audio_int16 = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
         with wave.open(str(output_path), "wb") as wf:
             wf.setnchannels(1)
@@ -243,6 +270,7 @@ class TTS:
         speaker_idx: str = "thai_som",
         return_type: str = "file",
         filename: Optional[str] = None,
+        custom_dict: Optional[Union[dict[str, str], str, Path, Iterable]] = None,
         **kwargs,
     ):
         """Generate speech from text using FastThaiG2P TTS.
@@ -251,6 +279,7 @@ class TTS:
         :param str speaker_idx: Voice to use (default: "thai_som" or path to custom voicepack)
         :param str return_type: Return type ("file" or "waveform")
         :param str filename: Output filename for the generated audio
+        :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words
         :param kwargs: Additional parameters (e.g., speed)
         :return: File path if return_type is "file", otherwise audio waveform data (numpy.ndarray)
         """
@@ -266,6 +295,8 @@ class TTS:
             self.speed = kwargs["speed"]
 
         if return_type == "waveform":
+            if custom_dict is not None:
+                return self.generate(text, custom_dict=custom_dict)
             return self.generate(text)
         else:
             import tempfile
@@ -274,7 +305,10 @@ class TTS:
                 with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as fp:
                     filename = fp.name
 
-            self.synthesize(text, filename)
+            if custom_dict is not None:
+                self.synthesize(text, filename, custom_dict=custom_dict)
+            else:
+                self.synthesize(text, filename)
             return str(filename)
 
     def stream(
@@ -285,6 +319,7 @@ class TTS:
         play: bool = False,
         preprocess: bool = True,
         max_phonemes: int = 400,
+        custom_dict: Optional[Union[dict[str, str], str, Path, Iterable]] = None,
         **kwargs,
     ):
         """Stream Thai speech generation chunk by chunk in real-time.
@@ -295,6 +330,7 @@ class TTS:
         :param bool play: Whether to play audio chunks in real-time to speakers
         :param bool preprocess: Whether to preprocess text (numbers to words, ๆ)
         :param int max_phonemes: Maximum phonemes per synthesized chunk (default: 400)
+        :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words
         :param kwargs: Additional parameters (e.g., speed)
         :yield: Audio chunk (np.ndarray float32 waveform, int16 bytes, or wav file path)
         """
@@ -319,10 +355,10 @@ class TTS:
                 text,
                 max_phonemes=max_phonemes,
                 preprocess=preprocess,
-                g2p_converter=self._text_to_phonemes,
+                g2p_converter=lambda t: self._text_to_phonemes(t, custom_dict=custom_dict),
             )
             for chunk in chunks:
-                audio = self.generate(chunk)
+                audio = self.generate(chunk, custom_dict=custom_dict)
                 if len(audio) == 0:
                     continue
 
@@ -349,9 +385,9 @@ class TTS:
                         f"Unsupported return_type '{return_type}'. Choose 'waveform', 'bytes', or 'file'."
                     )
         finally:
+            self.speed = orig_speed
             if player is not None:
                 player.close()
-            self.speed = orig_speed
 
     tts_stream = stream
 
