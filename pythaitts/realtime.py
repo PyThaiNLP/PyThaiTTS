@@ -105,6 +105,7 @@ def chunk_text(
     max_phonemes: int = 400,
     preprocess: bool = True,
     g2p_converter: Optional[Callable[[str], str]] = None,
+    custom_dict: Optional[Union[dict, str, Path, Iterable]] = None,
 ) -> List[str]:
     """Split Thai text into chunks suitable for FastThaiG2P synthesis.
 
@@ -115,6 +116,7 @@ def chunk_text(
     :param int max_phonemes: Maximum phonemes per chunk (default: 400)
     :param bool preprocess: Whether to preprocess text (numbers to words, ๆ)
     :param Callable g2p_converter: Optional custom function converting text to phonemes
+    :param custom_dict: Optional custom word dictionary for custom Thai pronunciation
     :return: List of text chunks
     """
     if not text or not str(text).strip():
@@ -155,10 +157,10 @@ def chunk_text(
     if g2p_converter is None:
         from pythaitts.pretrained.fastthaig2p import G2P, ipa_to_kokoro
 
-        _g2p = G2P()
+        _g2p = G2P(custom_dict=custom_dict)
 
         def _to_phonemes(t: str) -> str:
-            return ipa_to_kokoro(_g2p.convert(t))
+            return ipa_to_kokoro(_g2p.convert(t, custom_dict=custom_dict))
 
         g2p_converter = _to_phonemes
 
@@ -213,6 +215,7 @@ def stream_text_to_chunks(
     max_buffer_chars: int = 120,
     preprocess: bool = True,
     g2p_converter: Optional[Callable[[str], str]] = None,
+    custom_dict: Optional[Union[dict, str, Path, Iterable]] = None,
 ) -> Iterator[str]:
     """Yield text chunks from either a full string or a streaming iterable of text tokens.
 
@@ -224,6 +227,7 @@ def stream_text_to_chunks(
     :param int max_buffer_chars: Maximum characters to buffer before breaking on word boundary
     :param bool preprocess: Whether to preprocess text
     :param Callable g2p_converter: Optional phoneme conversion function
+    :param custom_dict: Optional custom word dictionary for custom Thai pronunciation
     :yield: Text chunks ready for synthesis
     """
     if isinstance(text_or_stream, str):
@@ -232,6 +236,7 @@ def stream_text_to_chunks(
             max_phonemes=max_phonemes,
             preprocess=preprocess,
             g2p_converter=g2p_converter,
+            custom_dict=custom_dict,
         ):
             yield c
         return
@@ -417,6 +422,7 @@ class FastThaiG2PEngine(BaseEngine):
         preprocess: bool = True,
         max_phonemes: int = 400,
         debug: bool = False,
+        custom_dict: Optional[Union[dict, str, Path, Iterable]] = None,
     ):
         super().__init__()
         self.engine_name = "fastthaig2p"
@@ -433,6 +439,7 @@ class FastThaiG2PEngine(BaseEngine):
             config_path=config_path,
             device=device,
             speed=speed,
+            custom_dict=custom_dict,
         )
         self.sample_rate = self.model.sample_rate
         self.set_voice(voice)

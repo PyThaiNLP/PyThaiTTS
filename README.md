@@ -142,6 +142,49 @@ print(eng("project"))                           # Output: /proː˧.t͡ɕek̚˨˩
 ```
 
 
+### Custom Word Pronunciation Dictionary
+
+PyThaiTTS supports custom word dictionaries to define custom Thai pronunciation (as Thai text reading or IPA phonemes) for specific words, acronyms, or names.
+
+Dictionaries can be passed as Python dicts, JSON files, or delimited text files (TSV, CSV, or colon-separated):
+
+```python
+from pythaitts import TTS
+
+# 1. Provide custom Thai pronunciation (hyphenated or plain text)
+custom_dict = {
+    "เพชรบุรี": "เพ็ด-ชะ-บุ-รี",
+    "สถิติ": "สะ-ถิ-ติ",
+    "ChatGPT": "แชตจีพีที",
+}
+
+tts = TTS(custom_dict=custom_dict)
+tts.tts("ยินดีต้อนรับสู่เพชรบุรี", filename="custom.wav")
+
+# 2. Or pass per-call or with IPA phonemes directly
+tts.tts(
+    "ผมไปเพชรบุรี",
+    custom_dict={"เพชรบุรี": "/pʰet̚˨˩.t͡ɕʰa˦˥.bu˨˩.riː˧/"},
+    filename="ipa.wav",
+)
+
+# 3. Add or update custom words dynamically
+tts.add_custom_dict({"ก.พ.": "กอ-พอ"})
+
+# 4. Load from a JSON or TSV file
+tts.set_custom_dict("my_words.json")
+```
+
+You can also use custom dictionaries with G2P directly:
+
+```python
+from pythaitts.pretrained.fastthaig2p import G2P
+
+g2p = G2P(custom_dict={"เพชรบุรี": "เพ็ด-ชะ-บุ-รี"})
+print(g2p.convert("ผมไปเพชรบุรี"))
+```
+
+
 ### Text Preprocessing
 
 PyThaiTTS includes automatic text preprocessing to improve TTS quality:
