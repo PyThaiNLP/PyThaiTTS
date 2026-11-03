@@ -23,6 +23,7 @@ from .g2p import G2P
 from .kokoro import ipa_to_kokoro
 from .normalizer import normalize
 from .tokenizer import Tokenizer
+from pythaitts.preprocess import load_custom_dict
 
 __all__ = [
     "G2P",
@@ -33,6 +34,7 @@ __all__ = [
     "Tokenizer",
     "normalize",
     "ipa_to_kokoro",
+    "load_custom_dict",
     "TTS",
     "FastThaiG2P",
     "FastThaiG2PEngine",

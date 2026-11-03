@@ -5,12 +5,98 @@ Thai Text Preprocessing for TTS
 This module provides text preprocessing functions for Thai Text-to-Speech,
 including number to Thai text conversion and handling of Thai repetition character (ๆ).
 """
+import json
 import re
+from pathlib import Path
+from typing import Any, Dict, Iterable, Optional, Union
 
 
 # Thai number words
 THAI_ONES = ["", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"]
 THAI_TENS = ["", "สิบ", "ยี่สิบ", "สามสิบ", "สี่สิบ", "ห้าสิบ", "หกสิบ", "เจ็ดสิบ", "แปดสิบ", "เก้าสิบ"]
+
+_IPA_TONES = set("˧˨˩˥˩˦˥˩˩˦↓↑→↘↗")
+_IPA_CHARS = set("ʔʰ̚ŋɕɔɛɯɤː̯")
+
+
+def _is_ipa(pron: str) -> bool:
+    """Check if a pronunciation string is already an IPA phoneme representation."""
+    pron = pron.strip()
+    if not pron:
+        return False
+    if pron.startswith("/") and pron.endswith("/"):
+        return True
+    if any(c in _IPA_TONES for c in pron):
+        return True
+    if any(c in _IPA_CHARS for c in pron):
+        return True
+    return False
+
+
+def load_custom_dict(
+    custom_dict: Optional[Union[Dict[str, str], str, Path, Iterable[Any]]]
+) -> Dict[str, str]:
+    """
+    Load a custom word pronunciation dictionary.
+
+    Supports:
+    - Python dict: ``{"word": "pronunciation", ...}``
+    - Path or str to a JSON file: ``{"word": "pronunciation", ...}``
+    - Path or str to a delimited text file (TSV, CSV, or colon):
+      ``word<TAB>pronunciation``, ``word,pronunciation``, or ``word: pronunciation``
+    - Iterable of ``(word, pronunciation)`` pairs or tuples.
+
+    :param custom_dict: Custom dictionary data or file path
+    :return: Dictionary mapping word to custom pronunciation
+    :rtype: Dict[str, str]
+    """
+    if custom_dict is None:
+        return {}
+    if isinstance(custom_dict, dict):
+        return {str(k).strip(): str(v).strip() for k, v in custom_dict.items() if str(k).strip()}
+
+    if isinstance(custom_dict, (str, Path)):
+        p = Path(custom_dict)
+        if not p.exists():
+            raise FileNotFoundError(f"Custom dictionary file not found: {custom_dict}")
+        if p.suffix.lower() == ".json":
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                raise ValueError("JSON custom dictionary must contain a key-value object.")
+            return {str(k).strip(): str(v).strip() for k, v in data.items() if str(k).strip()}
+        else:
+            result = {}
+            with open(p, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "\t" in line:
+                        parts = line.split("\t", 1)
+                    elif "," in line:
+                        parts = line.split(",", 1)
+                    elif ":" in line:
+                        parts = line.split(":", 1)
+                    else:
+                        continue
+                    k = parts[0].strip()
+                    v = parts[1].strip()
+                    if k:
+                        result[k] = v
+            return result
+
+    if isinstance(custom_dict, Iterable):
+        result = {}
+        for item in custom_dict:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                k = str(item[0]).strip()
+                v = str(item[1]).strip()
+                if k:
+                    result[k] = v
+        return result
+
+    raise TypeError(f"Unsupported custom_dict type: {type(custom_dict).__name__}")
 
 
 def _num_to_thai_under_hundred(num: int) -> str:
@@ -217,13 +303,20 @@ def expand_maiyamok(text: str) -> str:
     return ''.join(result)
 
 
-def preprocess_text(text: str, expand_numbers: bool = True, expand_maiyamok_char: bool = True) -> str:
+def preprocess_text(
+    text: str,
+    expand_numbers: bool = True,
+    expand_maiyamok_char: bool = True,
+    custom_dict: Optional[Union[Dict[str, str], str, Path, Iterable[Any]]] = None,
+) -> str:
     """
-    Preprocess Thai text for TTS by converting numbers to text and expanding ๆ.
+    Preprocess Thai text for TTS by converting numbers to text, expanding ๆ,
+    and optionally applying custom word pronunciation substitutions.
     
     :param str text: Input text to preprocess
     :param bool expand_numbers: Whether to convert numbers to Thai text (default: True)
     :param bool expand_maiyamok_char: Whether to expand ๆ character (default: True)
+    :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words
     :return: Preprocessed text
     :rtype: str
     
@@ -234,9 +327,25 @@ def preprocess_text(text: str, expand_numbers: bool = True, expand_maiyamok_char
         'ดีดี'
         >>> preprocess_text("มี 5 คนๆ")
         'มี ห้า คนคน'
+        >>> preprocess_text("ไปเพชรบุรี", custom_dict={"เพชรบุรี": "เพ็ดชะบุรี"})
+        'ไปเพ็ดชะบุรี'
     """
     result = text
     
+    # Apply custom word dictionary replacements if provided
+    if custom_dict is not None:
+        cd = load_custom_dict(custom_dict)
+        # Filter for text pronunciations (exclude IPA strings like /.../)
+        text_replacements = {
+            k: v for k, v in cd.items()
+            if not _is_ipa(v)
+        }
+        if text_replacements:
+            pattern = re.compile(
+                "|".join(re.escape(k) for k in sorted(text_replacements.keys(), key=len, reverse=True))
+            )
+            result = pattern.sub(lambda m: text_replacements[m.group(0)], result)
+
     # Expand mai yamok (ๆ) first
     if expand_maiyamok_char:
         result = expand_maiyamok(result)
