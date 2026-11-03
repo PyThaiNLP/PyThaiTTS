@@ -13,15 +13,15 @@ def main():
     print("=" * 60)
     print()
     
-    # Initialize TTS with default model (lunarlist_onnx)
-    print("Initializing TTS model (lunarlist_onnx)...")
+    # Initialize TTS with default model (fastthaig2p)
+    print("Initializing TTS model (fastthaig2p)...")
     try:
         tts = TTS()
         print("✓ TTS model loaded successfully!")
         print()
         
         # Sample Thai text
-        text = "สวัสดีครับ ยินดีต้อนรับสู่ PyThaiTTS"
+        text = "สวัสดีครับ ยินดีต้อนรับสู่ พายไทยทีทีเอส"
         print(f"Input text: {text}")
         print()
         

@@ -21,7 +21,7 @@ docker run --rm pythaitts:latest
 ```
 
 The demo will:
-1. Initialize the PyThaiTTS model (default: lunarlist_onnx)
+1. Initialize the PyThaiTTS model (default: fastthaig2p)
 2. Generate speech from Thai text
 3. Save the output to a WAV file
 4. Display the waveform information
@@ -81,7 +81,9 @@ print(f"Waveform shape: {waveform.shape}")
 
 PyThaiTTS supports multiple models:
 
-- **lunarlist_onnx** (default): ONNX-optimized model, CPU-only
+- **fastthaig2p** (default): FastThaiG2P model (voice: thai_som)
+- **lunarlist_onnx**: ONNX-optimized model, CPU-only
+- **vachana**: VachanaTTS model
 - **khanomtan**: KhanomTan TTS model
 - **lunarlist**: Original Lunarlist model
 
@@ -111,4 +113,4 @@ If you encounter issues with model downloads, ensure:
 
 - The first run will download model files from Hugging Face Hub, which may take some time depending on your internet connection
 - Generated audio files are in WAV format
-- The default model (lunarlist_onnx) runs on CPU and doesn't require GPU support
+- The default model (fastthaig2p) runs on CPU and doesn't require GPU support

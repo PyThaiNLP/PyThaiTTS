@@ -108,6 +108,15 @@ class TestVachanaIntegration(unittest.TestCase):
         call_args = mock_instance.call_args
         self.assertEqual(call_args.kwargs['return_type'], "waveform")
 
+    def test_vachana_missing_dependency(self):
+        """Test that VachanaTTS raises ImportError when vachanatts is not installed"""
+        from pythaitts.pretrained.vachana_tts import VachanaTTS
+        with patch.dict("sys.modules", {"vachanatts": None}):
+            with self.assertRaises(ImportError) as ctx:
+                VachanaTTS()
+            self.assertIn("vachanatts is not installed", str(ctx.exception))
+
 
 if __name__ == '__main__':
     unittest.main()
+

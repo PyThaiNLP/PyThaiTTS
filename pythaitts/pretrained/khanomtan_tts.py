@@ -7,6 +7,8 @@ It supports Thai, English, and others.
 
 KhanomTan TTS v1.0: `https://github.com/wannaphong/KhanomTan-TTS-v1.0 <https://github.com/wannaphong/KhanomTan-TTS-v1.0>`_
 KhanomTan TTS v1.1: `https://github.com/wannaphong/KhanomTan-TTS-v1.1 <https://github.com/wannaphong/KhanomTan-TTS-v1.1>`_
+
+This model uses the TTS package from: `https://github.com/idiap/coqui-ai-TTS <https://github.com/idiap/coqui-ai-TTS>`_
 """
 import tempfile
 from TTS.utils.synthesizer import Synthesizer
@@ -47,28 +49,22 @@ class KhanomTan:
         if mode=="best_model":
             self.best_model_path = hf_hub_download(repo_id="wannaphong/khanomtan-tts-v{0}".format(self.version),filename=self.best_model_path_name,force_filename="best_model-v{0}.pth".format(self.version))
             self.synthesizer = Synthesizer(
-                self.best_model_path,
-                self.config_path,
-                self.speakers_path,
-                self.languages_path,
-                None,
-                None,
-                self.speaker_encoder_model_path,
-                self.speaker_encoder_config_path,
-                False
+                tts_checkpoint=self.best_model_path,
+                tts_config_path=self.config_path,
+                tts_speakers_file=self.speakers_path,
+                tts_languages_file=self.languages_path,
+                encoder_checkpoint=self.speaker_encoder_model_path,
+                encoder_config=self.speaker_encoder_config_path
             )
         else:
             self.last_checkpoint_model_path = hf_hub_download(repo_id="wannaphong/khanomtan-tts-v{0}".format(self.version),filename=self.last_checkpoint_model_path_name,force_filename="last_checkpoint-v{0}.pth".format(self.version))
             self.synthesizer = Synthesizer(
-                self.last_checkpoint_model_path,
-                self.config_path,
-                self.speakers_path,
-                self.languages_path,
-                None,
-                None,
-                self.speaker_encoder_model_path,
-                self.speaker_encoder_config_path,
-                False
+                tts_checkpoint=self.last_checkpoint_model_path,
+                tts_config_path=self.config_path,
+                tts_speakers_file=self.speakers_path,
+                tts_languages_file=self.languages_path,
+                encoder_checkpoint=self.speaker_encoder_model_path,
+                encoder_config=self.speaker_encoder_config_path
             )
     def __call__(self, text: str, speaker_idx: str, language_idx: str, return_type: str = "file", filename: str = None):
         wavs = self.synthesizer.tts(text, speaker_idx, language_idx)
@@ -76,8 +72,8 @@ class KhanomTan:
             return wavs
         if filename != None:
             with open(filename, "wb") as fp:
-                self.synthesizer.save_wav(wavs, fp)
+                self.synthesizer.save_wav(wavs, path=filename)
         else:
-            with tempfile.NamedTemporaryFile(suffix = ".wav", delete = False) as fp:
-                self.synthesizer.save_wav(wavs, fp)
-        return fp.name
+            filename= tempfile.NamedTemporaryFile(suffix = ".wav", delete = False).name
+            self.synthesizer.save_wav(wavs, path=filename)
+        return filename
