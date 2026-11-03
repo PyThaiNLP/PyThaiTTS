@@ -38,6 +38,11 @@ from pythaitts import TTS
 tts = TTS(pretrained="fastthaig2p")
 file = tts.tts("สวัสดีครับ", speaker_idx="thai_som", filename="output.wav")
 
+# Use MakHamTTS (Paradee Thai INT8)
+# Sample Rate is 24000 Hz
+tts = TTS(pretrained="makhamtts")
+file = tts.tts("สวัสดีค่ะ ยินดีต้อนรับสู่บริการของเรา", speaker_idx="paradee_thai", filename="output.wav")
+
 # Use Lunarlist ONNX
 # Sample Rate is 22050 Hz
 tts = TTS(pretrained="lunarlist_onnx")

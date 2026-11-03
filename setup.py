@@ -19,6 +19,7 @@ setup(
     packages=find_packages(),
     package_data={
         "pythaitts.pretrained.fastthaig2p": ["data/*", "data/fallback/*"],
+        "pythaitts.pretrained": ["makhamtts/*.onnx", "makhamtts/*.json"],
     },
     include_package_data=True,
     python_requires=">=3.6",

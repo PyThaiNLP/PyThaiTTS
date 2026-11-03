@@ -26,7 +26,7 @@ from pythaitts.realtime import (
 class TTS:
     def __init__(self, pretrained="fastthaig2p", mode="last_checkpoint", version="1.0", device:str="cpu", **kwargs) -> None:
         """
-        :param str pretrained: TTS pretrained (fastthaig2p, lunarlist_onnx, khanomtan, lunarlist, vachana)
+        :param str pretrained: TTS pretrained (fastthaig2p, makhamtts, lunarlist_onnx, khanomtan, lunarlist, vachana)
         :param str mode: pretrained mode (fastthaig2p, lunarlist_onnx, and vachana don't support)
         :param str version: model version (default is 1.0 or 1.1)
         :param str device: device for running model. (fastthaig2p, lunarlist_onnx, and vachana support CPU only.)
@@ -72,6 +72,9 @@ class TTS:
         elif self.pretrained == "vachana":
             from pythaitts.pretrained.vachana_tts import VachanaTTS
             self.model = VachanaTTS()
+        elif self.pretrained in ("makhamtts", "MakHamTTS"):
+            from pythaitts.pretrained.makham_tts import MakHamTTS
+            self.model = MakHamTTS()
         elif self.pretrained in ("fastthaig2p", "FastThaiG2P"):
             from pythaitts.pretrained.fastthaig2p import FastThaiG2P
             self.model = FastThaiG2P(device=self.device, **kwargs)
@@ -102,6 +105,10 @@ class TTS:
         elif self.pretrained == "vachana":
             if speaker_idx in ("thai_som", "Linda", None):
                 speaker_idx = "th_f_1"
+            return self.model(text=text,speaker_idx=speaker_idx,return_type=return_type,filename=filename, **kwargs)
+        elif self.pretrained in ("makhamtts", "MakHamTTS"):
+            if speaker_idx in ("thai_som", "Linda", None):
+                speaker_idx = "paradee_thai"
             return self.model(text=text,speaker_idx=speaker_idx,return_type=return_type,filename=filename, **kwargs)
         elif self.pretrained in ("fastthaig2p", "FastThaiG2P"):
             if speaker_idx in ("Linda", None):
