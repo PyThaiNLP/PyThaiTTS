@@ -9,7 +9,7 @@ with open("requirements.txt","r",encoding="utf-8-sig") as f:
 
 setup(
     name="PyThaiTTS",
-    version="0.8.0",
+    version="1.0.0",
     description="Open Source Thai Text-to-speech library in Python",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -19,6 +19,7 @@ setup(
     packages=find_packages(),
     package_data={
         "pythaitts.pretrained.fastthaig2p": ["data/*", "data/fallback/*"],
+        "pythaitts.pretrained.makham": ["data/*"],
     },
     include_package_data=True,
     python_requires=">=3.6",

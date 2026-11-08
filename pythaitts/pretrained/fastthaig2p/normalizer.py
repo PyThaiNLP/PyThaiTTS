@@ -442,8 +442,14 @@ def _number_or_id_to_thai(match: re.Match) -> str:
     return _decimal_to_thai(text)
 
 
-def _expand_abbreviations(text: str) -> str:
-    return _ABBREV_PATTERN.sub(lambda m: ABBREVIATIONS[m.group(0)], text)
+def _expand_abbreviations(text: str, custom_dict: Optional[dict] = None) -> str:
+    def _repl(m: re.Match) -> str:
+        word = m.group(0)
+        if custom_dict and (word in custom_dict or word.strip() in custom_dict):
+            return word
+        return ABBREVIATIONS[word]
+
+    return _ABBREV_PATTERN.sub(_repl, text)
 
 
 # Acronyms / initialisms that are always spelled letter-by-letter in Thai
@@ -568,12 +574,14 @@ def _should_spell_latin_token(word: str, full_text: str, start: int, end: int) -
     return False
 
 
-def _spell_latin_residue(text: str, spell_all: bool = False) -> str:
+def _spell_latin_residue(text: str, spell_all: bool = False, custom_dict: Optional[dict] = None) -> str:
     """Spell out Latin acronyms/codes Thai-style (A → เอ, B → บี) while
     preserving pronounceable English words for English-to-Thai-IPA G2P.
     """
     def _repl(m: re.Match) -> str:
         word = m.group(0)
+        if custom_dict and (word in custom_dict or word.lower() in custom_dict):
+            return word
         if spell_all or _should_spell_latin_token(word, text, m.start(), m.end()):
             return "".join(LETTER_TO_THAI[c.upper()] for c in word)
         return word
@@ -585,8 +593,15 @@ def _expand_symbols(text: str) -> str:
     return _SYMBOL_PATTERN.sub(lambda m: SYMBOLS[m.group(0)], text)
 
 
-def _expand_english_abbrevs(text: str) -> str:
-    return _ENGLISH_ABBREV_PATTERN.sub(lambda m: ENGLISH_ABBREVS[m.group(0).lower()], text)
+def _expand_english_abbrevs(text: str, custom_dict: Optional[dict] = None) -> str:
+    def _repl(m: re.Match) -> str:
+        word = m.group(0)
+        lower_word = word.lower()
+        if custom_dict and (word in custom_dict or lower_word in custom_dict):
+            return word
+        return ENGLISH_ABBREVS[lower_word]
+
+    return _ENGLISH_ABBREV_PATTERN.sub(_repl, text)
 
 
 def _expand_units(text: str) -> str:
@@ -605,7 +620,7 @@ def _thai_numerals_to_arabic(text: str) -> str:
     return text
 
 
-def normalize(text: str, spell_latin: bool = False) -> str:
+def normalize(text: str, spell_latin: bool = False, custom_dict: Optional[dict] = None) -> str:
     """Normalize text for TTS: convert numbers, abbreviations, and special
     characters to speakable Thai words.
 
@@ -613,12 +628,14 @@ def normalize(text: str, spell_latin: bool = False) -> str:
     :param bool spell_latin: If True, spell all remaining Latin words letter-by-letter.
         If False (default), only acronyms and single letters are spelled out,
         leaving English words intact for English-to-Thai-IPA G2P.
+    :param dict custom_dict: Optional custom word dictionary to protect custom words
+        from being unintentionally expanded by abbreviations or normalizer rules.
     """
     text = _expand_maiyamok(text)
     text = _thai_numerals_to_arabic(text)
     text = _EMAIL_PATTERN.sub(_email_to_thai, text)
     text = _expand_en_contractions(text)
-    text = _expand_english_abbrevs(text)
+    text = _expand_english_abbrevs(text, custom_dict=custom_dict)
     text = _expand_units(text)
     text = _expand_symbols(text)
     text = _TIME_PATTERN.sub(_time_to_thai, text)
@@ -626,8 +643,8 @@ def normalize(text: str, spell_latin: bool = False) -> str:
     text = _ALPHANUM_ID_PATTERN.sub(_alphanum_to_thai, text)
     text = _COMMA_NUMBER_PATTERN.sub(_strip_commas_and_convert, text)
     text = _NUMBER_PATTERN.sub(_number_or_id_to_thai, text)
-    text = _expand_abbreviations(text)
-    text = _spell_latin_residue(text, spell_all=spell_latin)
+    text = _expand_abbreviations(text, custom_dict=custom_dict)
+    text = _spell_latin_residue(text, spell_all=spell_latin, custom_dict=custom_dict)
     # leftover hyphens (ชื่อ-นามสกุล) — connectors, not speakable tokens
     text = text.replace("-", " ")
     return text

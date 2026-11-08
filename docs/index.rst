@@ -40,6 +40,16 @@ PyThaiTTS provides English-to-Thai-IPA Grapheme-to-Phoneme (G2P) conversion for 
 
 .. autofunction:: en_ipa_to_thai_ipa
 
+MakHamTTS Models
+----------------
+MakHamTTS models powered by Kokoro-82M Thai and Paradee 1.1 distillation.
+
+.. autoclass:: MakHamTTS
+   :members:
+
+.. autoclass:: MakHamTTSParadee
+   :members:
+
 FastThaiG2P Components
 ----------------------
 

@@ -2,11 +2,21 @@
 """
 PyThaiTTS
 """
-__version__ = "0.8.0"
+__version__ = "1.0.0"
 
-from typing import Union, Iterable, Iterator
+from typing import Union, Iterable, Iterator, Optional, Dict, Any
+from pathlib import Path
 
-from pythaitts.preprocess import preprocess_text, num_to_thai, expand_maiyamok
+from pythaitts.preprocess import (
+    preprocess_text,
+    num_to_thai,
+    expand_maiyamok,
+    load_custom_dict,
+)
+from pythaitts.pretrained.makham import (
+    MakHamTTS,
+    MakHamTTSParadee,
+)
 from pythaitts.pretrained.fastthaig2p.en_g2p import (
     EnglishG2P,
     en_g2p,
@@ -24,12 +34,21 @@ from pythaitts.realtime import (
 
 
 class TTS:
-    def __init__(self, pretrained="fastthaig2p", mode="last_checkpoint", version="1.0", device:str="cpu", **kwargs) -> None:
+    def __init__(
+        self,
+        pretrained="fastthaig2p",
+        mode="last_checkpoint",
+        version="1.0",
+        device: str = "cpu",
+        custom_dict: Optional[Union[Dict[str, str], str, Path, Iterable[Any]]] = None,
+        **kwargs,
+    ) -> None:
         """
-        :param str pretrained: TTS pretrained (fastthaig2p, lunarlist_onnx, khanomtan, lunarlist, vachana)
-        :param str mode: pretrained mode (fastthaig2p, lunarlist_onnx, and vachana don't support)
+        :param str pretrained: TTS pretrained (fastthaig2p, makham, makham_paradee, lunarlist_onnx, khanomtan, lunarlist, vachana)
+        :param str mode: pretrained mode (fastthaig2p, makham, makham_paradee, lunarlist_onnx, and vachana don't support)
         :param str version: model version (default is 1.0 or 1.1)
-        :param str device: device for running model. (fastthaig2p, lunarlist_onnx, and vachana support CPU only.)
+        :param str device: device for running model. (fastthaig2p, makham, makham_paradee, lunarlist_onnx, and vachana support CPU only.)
+        :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words
 
         **Options for mode**
             * *last_checkpoint* (default) - last checkpoint of model
@@ -50,10 +69,16 @@ class TTS:
 
         For fastthaig2p tts model, \
         You can see more about fastthaig2p at `https://github.com/awslabs/FastThaiG2P <https://github.com/awslabs/FastThaiG2P>`_
+
+        For makham and makham_paradee tts models, \
+        You can see more about MakHamTTS at `https://huggingface.co/pythainlp/MakHamTTS <https://huggingface.co/pythainlp/MakHamTTS>`_
         """
         self.pretrained = pretrained
         self.mode = mode
         self.device = device
+        self.custom_dict = custom_dict
+        if custom_dict is not None:
+            kwargs["custom_dict"] = custom_dict
         self.load_pretrained(version=version, **kwargs)
 
     def load_pretrained(self, version="1.0", **kwargs):
@@ -75,12 +100,51 @@ class TTS:
         elif self.pretrained in ("fastthaig2p", "FastThaiG2P"):
             from pythaitts.pretrained.fastthaig2p import FastThaiG2P
             self.model = FastThaiG2P(device=self.device, **kwargs)
+        elif self.pretrained in ("makham", "MakHamTTS"):
+            from pythaitts.pretrained.makham import MakHamTTS
+            self.model = MakHamTTS(**kwargs)
+        elif self.pretrained in ("makham_paradee", "MakHamTTS_paradee"):
+            from pythaitts.pretrained.makham import MakHamTTSParadee
+            self.model = MakHamTTSParadee(**kwargs)
         else:
             raise NotImplementedError(
                 "PyThaiTTS doesn't support %s pretrained." % self.pretrained
             )
 
-    def tts(self, text: str, speaker_idx: str = "thai_som", language_idx: str = "th-th", return_type: str = "file", filename: str = None, preprocess: bool = True, **kwargs):
+    def add_custom_dict(
+        self, custom_dict: Union[Dict[str, str], str, Path, Iterable[Any]]
+    ) -> None:
+        """Add custom word pronunciations to the TTS model."""
+        loaded = load_custom_dict(custom_dict)
+        if self.custom_dict is None:
+            self.custom_dict = {}
+        elif isinstance(self.custom_dict, (str, Path)):
+            self.custom_dict = load_custom_dict(self.custom_dict)
+        elif not isinstance(self.custom_dict, dict):
+            self.custom_dict = load_custom_dict(self.custom_dict)
+        self.custom_dict.update(loaded)
+        if hasattr(self.model, "add_custom_dict"):
+            self.model.add_custom_dict(loaded)
+
+    def set_custom_dict(
+        self, custom_dict: Union[Dict[str, str], str, Path, Iterable[Any]]
+    ) -> None:
+        """Replace custom word pronunciations with new dictionary."""
+        self.custom_dict = custom_dict
+        if hasattr(self.model, "set_custom_dict"):
+            self.model.set_custom_dict(custom_dict)
+
+    def tts(
+        self,
+        text: str,
+        speaker_idx: str = "thai_som",
+        language_idx: str = "th-th",
+        return_type: str = "file",
+        filename: str = None,
+        preprocess: bool = True,
+        custom_dict: Optional[Union[Dict[str, str], str, Path, Iterable[Any]]] = None,
+        **kwargs,
+    ):
         """
         speech synthesis
 
@@ -90,31 +154,88 @@ class TTS:
         :param str return_type: return type (default is file)
         :param str filename: path filename for save wav file if return_type is file.
         :param bool preprocess: whether to preprocess text (convert numbers to Thai text and expand ๆ). Default is True.
+        :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words
         :param kwargs: Additional parameters passed to the underlying model.
         """
+        effective_custom_dict = (
+            custom_dict if custom_dict is not None else getattr(self, "custom_dict", None)
+        )
+
         # Preprocess text if requested
         if preprocess:
             from pythaitts.preprocess import preprocess_text
-            text = preprocess_text(text)
+
+            if self.pretrained not in ("fastthaig2p", "FastThaiG2P") and effective_custom_dict:
+                text = preprocess_text(text, custom_dict=effective_custom_dict)
+            else:
+                text = preprocess_text(text)
+        elif self.pretrained not in ("fastthaig2p", "FastThaiG2P") and effective_custom_dict:
+            from pythaitts.preprocess import preprocess_text
+
+            text = preprocess_text(
+                text,
+                expand_numbers=False,
+                expand_maiyamok_char=False,
+                custom_dict=effective_custom_dict,
+            )
         
         if self.pretrained == "lunarlist" or self.pretrained == "lunarlist_onnx":
-            return self.model(text=text,return_type=return_type,filename=filename)
+            return self.model(text=text, return_type=return_type, filename=filename)
         elif self.pretrained == "vachana":
-            if speaker_idx in ("thai_som", "Linda", None):
+            if speaker_idx in ("thai_som", "Linda", "newvoice_female", None):
                 speaker_idx = "th_f_1"
-            return self.model(text=text,speaker_idx=speaker_idx,return_type=return_type,filename=filename, **kwargs)
+            return self.model(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                filename=filename,
+                **kwargs,
+            )
         elif self.pretrained in ("fastthaig2p", "FastThaiG2P"):
-            if speaker_idx in ("Linda", None):
+            if speaker_idx in ("Linda", "newvoice_female", None):
                 speaker_idx = "thai_som"
-            return self.model(text=text,speaker_idx=speaker_idx,return_type=return_type,filename=filename, **kwargs)
-        if speaker_idx in ("thai_som", None):
+            call_kwargs = dict(kwargs)
+            if effective_custom_dict is not None:
+                call_kwargs["custom_dict"] = effective_custom_dict
+            return self.model(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                filename=filename,
+                **call_kwargs,
+            )
+        elif self.pretrained in ("makham", "MakHamTTS"):
+            if speaker_idx in ("Linda", "thai_som", None):
+                speaker_idx = "newvoice_female"
+            call_kwargs = dict(kwargs)
+            if effective_custom_dict is not None:
+                call_kwargs["custom_dict"] = effective_custom_dict
+            return self.model(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                filename=filename,
+                **call_kwargs,
+            )
+        elif self.pretrained in ("makham_paradee", "MakHamTTS_paradee"):
+            call_kwargs = dict(kwargs)
+            if effective_custom_dict is not None:
+                call_kwargs["custom_dict"] = effective_custom_dict
+            return self.model(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                filename=filename,
+                **call_kwargs,
+            )
+        if speaker_idx in ("thai_som", "newvoice_female", None):
             speaker_idx = "Linda"
         return self.model(
             text=text,
             speaker_idx=speaker_idx,
             language_idx=language_idx,
             return_type=return_type,
-            filename=filename
+            filename=filename,
         )
 
     def stream(
@@ -125,6 +246,7 @@ class TTS:
         play: bool = False,
         preprocess: bool = True,
         max_phonemes: int = 400,
+        custom_dict: Optional[Union[Dict[str, str], str, Path, Iterable[Any]]] = None,
         **kwargs,
     ):
         """
@@ -136,11 +258,16 @@ class TTS:
         :param bool play: Whether to play audio chunks in real-time to speakers
         :param bool preprocess: Whether to preprocess text (numbers to words, ๆ)
         :param int max_phonemes: Maximum phonemes per synthesized chunk
+        :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words
         :param kwargs: Additional parameters passed to the model
         :return: Generator yielding audio chunks
         """
+        effective_custom_dict = (
+            custom_dict if custom_dict is not None else getattr(self, "custom_dict", None)
+        )
+
         if self.pretrained in ("fastthaig2p", "FastThaiG2P"):
-            if speaker_idx in ("Linda", None):
+            if speaker_idx in ("Linda", "newvoice_female", None):
                 speaker_idx = "thai_som"
             return self.model.stream(
                 text=text,
@@ -149,6 +276,31 @@ class TTS:
                 play=play,
                 preprocess=preprocess,
                 max_phonemes=max_phonemes,
+                custom_dict=effective_custom_dict,
+                **kwargs,
+            )
+        elif self.pretrained in ("makham", "MakHamTTS"):
+            if speaker_idx in ("Linda", "thai_som", None):
+                speaker_idx = "newvoice_female"
+            return self.model.stream(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                play=play,
+                preprocess=preprocess,
+                max_phonemes=max_phonemes,
+                custom_dict=effective_custom_dict,
+                **kwargs,
+            )
+        elif self.pretrained in ("makham_paradee", "MakHamTTS_paradee"):
+            return self.model.stream(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                play=play,
+                preprocess=preprocess,
+                max_phonemes=max_phonemes,
+                custom_dict=effective_custom_dict,
                 **kwargs,
             )
         else:
@@ -156,13 +308,17 @@ class TTS:
 
             def _gen():
                 for chunk in stream_text_to_chunks(
-                    text, max_phonemes=max_phonemes, preprocess=preprocess
+                    text,
+                    max_phonemes=max_phonemes,
+                    preprocess=preprocess,
+                    custom_dict=effective_custom_dict,
                 ):
                     yield self.tts(
                         text=chunk,
                         speaker_idx=speaker_idx,
                         return_type=return_type,
                         preprocess=False,
+                        custom_dict=effective_custom_dict,
                         **kwargs,
                     )
 
@@ -181,7 +337,10 @@ __all__ = [
     "en_g2p",
     "en_to_ipa",
     "en_ipa_to_thai_ipa",
+    "MakHamTTS",
+    "MakHamTTSParadee",
     "preprocess_text",
+    "load_custom_dict",
     "num_to_thai",
     "expand_maiyamok",
     "chunk_text",

@@ -38,6 +38,16 @@ from pythaitts import TTS
 tts = TTS(pretrained="fastthaig2p")
 file = tts.tts("สวัสดีครับ", speaker_idx="thai_som", filename="output.wav")
 
+# Use MakHamTTS Paradee (standalone, single-voice 8MB quantized INT8 ONNX model, offline without download)
+# MakHamTTS Paradee Sample Rate is 24000 Hz
+tts = TTS(pretrained="makham_paradee")
+file = tts.tts("สวัสดีค่ะ", filename="output.wav")
+
+# Use MakHamTTS (Kokoro-82M Thai base model, voices: newvoice_female, newvoice_male)
+# MakHamTTS Sample Rate is 24000 Hz
+tts = TTS(pretrained="makham")
+file = tts.tts("สวัสดีค่ะ", speaker_idx="newvoice_female", filename="output.wav")
+
 # Use Lunarlist ONNX
 # Sample Rate is 22050 Hz
 tts = TTS(pretrained="lunarlist_onnx")
@@ -139,6 +149,49 @@ print(en_g2p("computer"))                       # Output: /kʰɔm˧.pʰiw˧.tɤ�
 # Or use the EnglishG2P class
 eng = EnglishG2P()
 print(eng("project"))                           # Output: /proː˧.t͡ɕek̚˨˩/
+```
+
+
+### Custom Word Pronunciation Dictionary
+
+PyThaiTTS supports custom word dictionaries to define custom Thai pronunciation (as Thai text reading or IPA phonemes) for specific words, acronyms, or names.
+
+Dictionaries can be passed as Python dicts, JSON files, or delimited text files (TSV, CSV, or colon-separated):
+
+```python
+from pythaitts import TTS
+
+# 1. Provide custom Thai pronunciation (hyphenated or plain text)
+custom_dict = {
+    "เพชรบุรี": "เพ็ด-ชะ-บุ-รี",
+    "สถิติ": "สะ-ถิ-ติ",
+    "ChatGPT": "แชตจีพีที",
+}
+
+tts = TTS(custom_dict=custom_dict)
+tts.tts("ยินดีต้อนรับสู่เพชรบุรี", filename="custom.wav")
+
+# 2. Or pass per-call or with IPA phonemes directly
+tts.tts(
+    "ผมไปเพชรบุรี",
+    custom_dict={"เพชรบุรี": "/pʰet̚˨˩.t͡ɕʰa˦˥.bu˨˩.riː˧/"},
+    filename="ipa.wav",
+)
+
+# 3. Add or update custom words dynamically
+tts.add_custom_dict({"ก.พ.": "กอ-พอ"})
+
+# 4. Load from a JSON or TSV file
+tts.set_custom_dict("my_words.json")
+```
+
+You can also use custom dictionaries with G2P directly:
+
+```python
+from pythaitts.pretrained.fastthaig2p import G2P
+
+g2p = G2P(custom_dict={"เพชรบุรี": "เพ็ด-ชะ-บุ-รี"})
+print(g2p.convert("ผมไปเพชรบุรี"))
 ```
 
 

@@ -23,7 +23,7 @@ def main():
     # 1. Initialize TTS model
     print("Initializing FastThaiG2P TTS model...")
     t_start = time.time()
-    tts = TTS(pretrained="fastthaig2p")
+    tts = TTS(pretrained="makham_paradee")
     print(f"✓ Model loaded in {time.time() - t_start:.2f}s")
     print()
 
