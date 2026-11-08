@@ -14,7 +14,7 @@ def main():
     print("-" * 50)
 
     # Initialize FastThaiG2P TTS
-    tts = TTS(pretrained="fastthaig2p")
+    tts = TTS(pretrained="makham_paradee")
 
     # 1. Stream speech from text string chunk-by-chunk
     text = "สวัสดีครับ ยินดีต้อนรับสู่ระบบสังเคราะห์เสียงภาษาไทยแบบเรียลไทม์"

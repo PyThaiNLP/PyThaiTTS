@@ -38,6 +38,16 @@ from pythaitts import TTS
 tts = TTS(pretrained="fastthaig2p")
 file = tts.tts("สวัสดีครับ", speaker_idx="thai_som", filename="output.wav")
 
+# Use MakHamTTS Paradee (standalone, single-voice 8MB quantized INT8 ONNX model, offline without download)
+# MakHamTTS Paradee Sample Rate is 24000 Hz
+tts = TTS(pretrained="makham_paradee")
+file = tts.tts("สวัสดีค่ะ", filename="output.wav")
+
+# Use MakHamTTS (Kokoro-82M Thai base model, voices: newvoice_female, newvoice_male)
+# MakHamTTS Sample Rate is 24000 Hz
+tts = TTS(pretrained="makham")
+file = tts.tts("สวัสดีค่ะ", speaker_idx="newvoice_female", filename="output.wav")
+
 # Use Lunarlist ONNX
 # Sample Rate is 22050 Hz
 tts = TTS(pretrained="lunarlist_onnx")
