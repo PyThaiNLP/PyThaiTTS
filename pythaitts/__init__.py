@@ -2,7 +2,7 @@
 """
 PyThaiTTS
 """
-__version__ = "0.8.0"
+__version__ = "1.0.0"
 
 from typing import Union, Iterable, Iterator, Optional, Dict, Any
 from pathlib import Path
