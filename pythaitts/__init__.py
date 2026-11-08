@@ -13,6 +13,10 @@ from pythaitts.preprocess import (
     expand_maiyamok,
     load_custom_dict,
 )
+from pythaitts.pretrained.makham import (
+    MakHamTTS,
+    MakHamTTSParadee,
+)
 from pythaitts.pretrained.fastthaig2p.en_g2p import (
     EnglishG2P,
     en_g2p,
@@ -40,10 +44,10 @@ class TTS:
         **kwargs,
     ) -> None:
         """
-        :param str pretrained: TTS pretrained (fastthaig2p, lunarlist_onnx, khanomtan, lunarlist, vachana)
-        :param str mode: pretrained mode (fastthaig2p, lunarlist_onnx, and vachana don't support)
+        :param str pretrained: TTS pretrained (fastthaig2p, makham, makham_paradee, lunarlist_onnx, khanomtan, lunarlist, vachana)
+        :param str mode: pretrained mode (fastthaig2p, makham, makham_paradee, lunarlist_onnx, and vachana don't support)
         :param str version: model version (default is 1.0 or 1.1)
-        :param str device: device for running model. (fastthaig2p, lunarlist_onnx, and vachana support CPU only.)
+        :param str device: device for running model. (fastthaig2p, makham, makham_paradee, lunarlist_onnx, and vachana support CPU only.)
         :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words
 
         **Options for mode**
@@ -65,6 +69,9 @@ class TTS:
 
         For fastthaig2p tts model, \
         You can see more about fastthaig2p at `https://github.com/awslabs/FastThaiG2P <https://github.com/awslabs/FastThaiG2P>`_
+
+        For makham and makham_paradee tts models, \
+        You can see more about MakHamTTS at `https://huggingface.co/pythainlp/MakHamTTS <https://huggingface.co/pythainlp/MakHamTTS>`_
         """
         self.pretrained = pretrained
         self.mode = mode
@@ -93,6 +100,12 @@ class TTS:
         elif self.pretrained in ("fastthaig2p", "FastThaiG2P"):
             from pythaitts.pretrained.fastthaig2p import FastThaiG2P
             self.model = FastThaiG2P(device=self.device, **kwargs)
+        elif self.pretrained in ("makham", "MakHamTTS"):
+            from pythaitts.pretrained.makham import MakHamTTS
+            self.model = MakHamTTS(**kwargs)
+        elif self.pretrained in ("makham_paradee", "MakHamTTS_paradee"):
+            from pythaitts.pretrained.makham import MakHamTTSParadee
+            self.model = MakHamTTSParadee(**kwargs)
         else:
             raise NotImplementedError(
                 "PyThaiTTS doesn't support %s pretrained." % self.pretrained
@@ -169,7 +182,7 @@ class TTS:
         if self.pretrained == "lunarlist" or self.pretrained == "lunarlist_onnx":
             return self.model(text=text, return_type=return_type, filename=filename)
         elif self.pretrained == "vachana":
-            if speaker_idx in ("thai_som", "Linda", None):
+            if speaker_idx in ("thai_som", "Linda", "newvoice_female", None):
                 speaker_idx = "th_f_1"
             return self.model(
                 text=text,
@@ -179,7 +192,7 @@ class TTS:
                 **kwargs,
             )
         elif self.pretrained in ("fastthaig2p", "FastThaiG2P"):
-            if speaker_idx in ("Linda", None):
+            if speaker_idx in ("Linda", "newvoice_female", None):
                 speaker_idx = "thai_som"
             call_kwargs = dict(kwargs)
             if effective_custom_dict is not None:
@@ -191,7 +204,31 @@ class TTS:
                 filename=filename,
                 **call_kwargs,
             )
-        if speaker_idx in ("thai_som", None):
+        elif self.pretrained in ("makham", "MakHamTTS"):
+            if speaker_idx in ("Linda", "thai_som", None):
+                speaker_idx = "newvoice_female"
+            call_kwargs = dict(kwargs)
+            if effective_custom_dict is not None:
+                call_kwargs["custom_dict"] = effective_custom_dict
+            return self.model(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                filename=filename,
+                **call_kwargs,
+            )
+        elif self.pretrained in ("makham_paradee", "MakHamTTS_paradee"):
+            call_kwargs = dict(kwargs)
+            if effective_custom_dict is not None:
+                call_kwargs["custom_dict"] = effective_custom_dict
+            return self.model(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                filename=filename,
+                **call_kwargs,
+            )
+        if speaker_idx in ("thai_som", "newvoice_female", None):
             speaker_idx = "Linda"
         return self.model(
             text=text,
@@ -230,8 +267,32 @@ class TTS:
         )
 
         if self.pretrained in ("fastthaig2p", "FastThaiG2P"):
-            if speaker_idx in ("Linda", None):
+            if speaker_idx in ("Linda", "newvoice_female", None):
                 speaker_idx = "thai_som"
+            return self.model.stream(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                play=play,
+                preprocess=preprocess,
+                max_phonemes=max_phonemes,
+                custom_dict=effective_custom_dict,
+                **kwargs,
+            )
+        elif self.pretrained in ("makham", "MakHamTTS"):
+            if speaker_idx in ("Linda", "thai_som", None):
+                speaker_idx = "newvoice_female"
+            return self.model.stream(
+                text=text,
+                speaker_idx=speaker_idx,
+                return_type=return_type,
+                play=play,
+                preprocess=preprocess,
+                max_phonemes=max_phonemes,
+                custom_dict=effective_custom_dict,
+                **kwargs,
+            )
+        elif self.pretrained in ("makham_paradee", "MakHamTTS_paradee"):
             return self.model.stream(
                 text=text,
                 speaker_idx=speaker_idx,
@@ -276,6 +337,8 @@ __all__ = [
     "en_g2p",
     "en_to_ipa",
     "en_ipa_to_thai_ipa",
+    "MakHamTTS",
+    "MakHamTTSParadee",
     "preprocess_text",
     "load_custom_dict",
     "num_to_thai",
