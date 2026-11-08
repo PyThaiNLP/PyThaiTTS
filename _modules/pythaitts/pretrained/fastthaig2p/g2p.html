@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pythaitts.pretrained.fastthaig2p.g2p &mdash; PyThaiTTS ac06fa8 documentation</title>
+  <title>pythaitts.pretrained.fastthaig2p.g2p &mdash; PyThaiTTS 217bd8d documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../../_static/documentation_options.js?v=bd22de34"></script>
+      <script src="../../../../_static/documentation_options.js?v=49ed083f"></script>
       <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/js/theme.js"></script>
@@ -89,7 +89,9 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.preprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">_is_ipa</span><span class="p">,</span> <span class="n">load_custom_dict</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._data</span><span class="w"> </span><span class="kn">import</span> <span class="n">data_path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.en_g2p</span><span class="w"> </span><span class="kn">import</span> <span class="n">en_g2p</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.fallback</span><span class="w"> </span><span class="kn">import</span> <span class="n">fallback_g2p</span>
@@ -112,21 +114,74 @@
         <span class="n">dict_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_DICT_PATH</span><span class="p">,</span>
         <span class="n">ipa_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_IPA_PATH</span><span class="p">,</span>
         <span class="n">use_espeak</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tokenizer</span> <span class="o">=</span> <span class="n">Tokenizer</span><span class="p">(</span><span class="n">dict_path</span><span class="p">)</span>
         <span class="n">ipa_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ipa_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ipa</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">ipa_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">use_espeak</span> <span class="o">=</span> <span class="n">use_espeak</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_espeak</span> <span class="o">=</span> <span class="n">use_espeak</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_custom_ipa</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_custom_dict</span><span class="p">(</span><span class="n">custom_dict</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="G2P.convert">
-<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.G2P.convert">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">convert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Convert Thai (and code-switched English) text to IPA phonemes.</span>
+<div class="viewcode-block" id="G2P.add_custom_dict">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.G2P.add_custom_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_custom_dict</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Add custom word pronunciations to the G2P engine."""</span>
+        <span class="n">loaded</span> <span class="o">=</span> <span class="n">load_custom_dict</span><span class="p">(</span><span class="n">custom_dict</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">pron</span> <span class="ow">in</span> <span class="n">loaded</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span><span class="p">[</span><span class="n">word</span><span class="p">]</span> <span class="o">=</span> <span class="n">pron</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_custom_ipa</span><span class="p">[</span><span class="n">word</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pronunciation_to_ipa</span><span class="p">(</span><span class="n">pron</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tokenizer</span><span class="o">.</span><span class="n">add_words</span><span class="p">(</span><span class="n">loaded</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
 
-<span class="sd">        Pipeline: normalize → tokenize → dict lookup → English G2P / fallback G2P → join.</span>
-<span class="sd">        """</span>
-        <span class="n">normalized</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+<div class="viewcode-block" id="G2P.set_custom_dict">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.G2P.set_custom_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_custom_dict</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Replace all custom word pronunciations with a new dictionary."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear_custom_dict</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_custom_dict</span><span class="p">(</span><span class="n">custom_dict</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="G2P.remove_custom_word">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.G2P.remove_custom_word">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_custom_word</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">word</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Remove a word from the custom dictionary."""</span>
+        <span class="n">word</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">word</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_custom_ipa</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_custom_ipa</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tokenizer</span><span class="o">.</span><span class="n">remove_words</span><span class="p">(</span><span class="n">word</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="G2P.clear_custom_dict">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.G2P.clear_custom_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clear_custom_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Clear all custom word pronunciations."""</span>
+        <span class="n">keys_to_remove</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_custom_ipa</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tokenizer</span><span class="o">.</span><span class="n">remove_words</span><span class="p">(</span><span class="n">keys_to_remove</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pronunciation_to_ipa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pron</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Convert a custom pronunciation string (Thai text or IPA) to IPA phonemes."""</span>
+        <span class="n">pron</span> <span class="o">=</span> <span class="n">pron</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pron</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">""</span>
+        <span class="k">if</span> <span class="n">_is_ipa</span><span class="p">(</span><span class="n">pron</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">pron</span>
+
+        <span class="n">clean_pron</span> <span class="o">=</span> <span class="n">pron</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span>
+        <span class="n">normalized</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">clean_pron</span><span class="p">)</span>
         <span class="n">tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">normalized</span><span class="p">)</span>
         <span class="n">phonemes</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
@@ -139,7 +194,56 @@
                 <span class="n">phonemes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">en_g2p</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">use_espeak</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_espeak</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">phonemes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fallback_g2p</span><span class="p">(</span><span class="n">token</span><span class="p">))</span>
-        <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">phonemes</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">phonemes</span><span class="p">)</span>
+
+<div class="viewcode-block" id="G2P.convert">
+<a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.G2P.convert">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">convert</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Convert Thai (and code-switched English) text to IPA phonemes.</span>
+
+<span class="sd">        Pipeline: normalize → tokenize → dict lookup → English G2P / fallback G2P → join.</span>
+<span class="sd">        Supports custom_dict for custom Thai pronunciation in words.</span>
+<span class="sd">        """</span>
+        <span class="n">temp_keys</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">temp_loaded</span> <span class="o">=</span> <span class="n">load_custom_dict</span><span class="p">(</span><span class="n">custom_dict</span><span class="p">)</span>
+            <span class="n">effective_custom_dict</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span><span class="p">,</span> <span class="o">**</span><span class="n">temp_loaded</span><span class="p">}</span>
+            <span class="n">effective_custom_ipa</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_custom_ipa</span><span class="p">,</span>
+                <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pronunciation_to_ipa</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">temp_loaded</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="p">}</span>
+            <span class="n">temp_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">temp_loaded</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">temp_keys</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tokenizer</span><span class="o">.</span><span class="n">add_words</span><span class="p">(</span><span class="n">temp_keys</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">effective_custom_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_custom_dict</span>
+            <span class="n">effective_custom_ipa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_custom_ipa</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">normalized</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">custom_dict</span><span class="o">=</span><span class="n">effective_custom_dict</span><span class="p">)</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">normalized</span><span class="p">)</span>
+            <span class="n">phonemes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">""</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">effective_custom_ipa</span><span class="p">:</span>
+                    <span class="n">phonemes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">effective_custom_ipa</span><span class="p">[</span><span class="n">token</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ipa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ipa</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">ipa</span><span class="p">:</span>
+                        <span class="n">phonemes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ipa</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="n">_EN_TOKEN_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
+                        <span class="n">phonemes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">en_g2p</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">use_espeak</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_espeak</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">phonemes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fallback_g2p</span><span class="p">(</span><span class="n">token</span><span class="p">))</span>
+            <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">phonemes</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">temp_keys</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tokenizer</span><span class="o">.</span><span class="n">remove_words</span><span class="p">(</span><span class="n">temp_keys</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

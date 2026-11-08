@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pythaitts &mdash; PyThaiTTS ac06fa8 documentation</title>
+  <title>pythaitts &mdash; PyThaiTTS 217bd8d documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=bd22de34"></script>
+      <script src="../_static/documentation_options.js?v=49ed083f"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -70,11 +70,21 @@
 <span class="sd">"""</span>
 <span class="sd">PyThaiTTS</span>
 <span class="sd">"""</span>
-<span class="n">__version__</span> <span class="o">=</span> <span class="s2">"0.8.0"</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s2">"1.0.0"</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Iterator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.preprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_text</span><span class="p">,</span> <span class="n">num_to_thai</span><span class="p">,</span> <span class="n">expand_maiyamok</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.preprocess</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">preprocess_text</span><span class="p">,</span>
+    <span class="n">num_to_thai</span><span class="p">,</span>
+    <span class="n">expand_maiyamok</span><span class="p">,</span>
+    <span class="n">load_custom_dict</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.makham</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MakHamTTS</span><span class="p">,</span>
+    <span class="n">MakHamTTSParadee</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.fastthaig2p.en_g2p</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">EnglishG2P</span><span class="p">,</span>
     <span class="n">en_g2p</span><span class="p">,</span>
@@ -96,12 +106,21 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">TTS</span><span class="p">:</span>
 <div class="viewcode-block" id="TTS.__init__">
 <a class="viewcode-back" href="../index.html#pythaitts.TTS.__init__">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pretrained</span><span class="o">=</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"last_checkpoint"</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1.0"</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pretrained</span><span class="o">=</span><span class="s2">"fastthaig2p"</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">"last_checkpoint"</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="s2">"1.0"</span><span class="p">,</span>
+        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
+        <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        :param str pretrained: TTS pretrained (fastthaig2p, lunarlist_onnx, khanomtan, lunarlist, vachana)</span>
-<span class="sd">        :param str mode: pretrained mode (fastthaig2p, lunarlist_onnx, and vachana don't support)</span>
+<span class="sd">        :param str pretrained: TTS pretrained (fastthaig2p, makham, makham_paradee, lunarlist_onnx, khanomtan, lunarlist, vachana)</span>
+<span class="sd">        :param str mode: pretrained mode (fastthaig2p, makham, makham_paradee, lunarlist_onnx, and vachana don't support)</span>
 <span class="sd">        :param str version: model version (default is 1.0 or 1.1)</span>
-<span class="sd">        :param str device: device for running model. (fastthaig2p, lunarlist_onnx, and vachana support CPU only.)</span>
+<span class="sd">        :param str device: device for running model. (fastthaig2p, makham, makham_paradee, lunarlist_onnx, and vachana support CPU only.)</span>
+<span class="sd">        :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words</span>
 
 <span class="sd">        **Options for mode**</span>
 <span class="sd">            * *last_checkpoint* (default) - last checkpoint of model</span>
@@ -122,10 +141,16 @@
 
 <span class="sd">        For fastthaig2p tts model, \</span>
 <span class="sd">        You can see more about fastthaig2p at `https://github.com/awslabs/FastThaiG2P &lt;https://github.com/awslabs/FastThaiG2P&gt;`_</span>
+
+<span class="sd">        For makham and makham_paradee tts models, \</span>
+<span class="sd">        You can see more about MakHamTTS at `https://huggingface.co/pythainlp/MakHamTTS &lt;https://huggingface.co/pythainlp/MakHamTTS&gt;`_</span>
 <span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">=</span> <span class="n">pretrained</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span> <span class="o">=</span> <span class="n">custom_dict</span>
+        <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">"custom_dict"</span><span class="p">]</span> <span class="o">=</span> <span class="n">custom_dict</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load_pretrained</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
@@ -150,15 +175,60 @@
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="s2">"FastThaiG2P"</span><span class="p">):</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.fastthaig2p</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastThaiG2P</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">FastThaiG2P</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"makham"</span><span class="p">,</span> <span class="s2">"MakHamTTS"</span><span class="p">):</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.makham</span><span class="w"> </span><span class="kn">import</span> <span class="n">MakHamTTS</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">MakHamTTS</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"makham_paradee"</span><span class="p">,</span> <span class="s2">"MakHamTTS_paradee"</span><span class="p">):</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.pretrained.makham</span><span class="w"> </span><span class="kn">import</span> <span class="n">MakHamTTSParadee</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">MakHamTTSParadee</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
                 <span class="s2">"PyThaiTTS doesn't support </span><span class="si">%s</span><span class="s2"> pretrained."</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span>
             <span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="TTS.add_custom_dict">
+<a class="viewcode-back" href="../index.html#pythaitts.TTS.add_custom_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_custom_dict</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Add custom word pronunciations to the TTS model."""</span>
+        <span class="n">loaded</span> <span class="o">=</span> <span class="n">load_custom_dict</span><span class="p">(</span><span class="n">custom_dict</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span> <span class="o">=</span> <span class="n">load_custom_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span> <span class="o">=</span> <span class="n">load_custom_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">loaded</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="s2">"add_custom_dict"</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">add_custom_dict</span><span class="p">(</span><span class="n">loaded</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TTS.set_custom_dict">
+<a class="viewcode-back" href="../index.html#pythaitts.TTS.set_custom_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_custom_dict</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Replace custom word pronunciations with new dictionary."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">custom_dict</span> <span class="o">=</span> <span class="n">custom_dict</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="s2">"set_custom_dict"</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">set_custom_dict</span><span class="p">(</span><span class="n">custom_dict</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="TTS.tts">
 <a class="viewcode-back" href="../index.html#pythaitts.TTS.tts">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">tts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"thai_som"</span><span class="p">,</span> <span class="n">language_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"th-th"</span><span class="p">,</span> <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"file"</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">preprocess</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tts</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">speaker_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"thai_som"</span><span class="p">,</span>
+        <span class="n">language_idx</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"th-th"</span><span class="p">,</span>
+        <span class="n">return_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"file"</span><span class="p">,</span>
+        <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">preprocess</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        speech synthesis</span>
 
@@ -168,31 +238,88 @@
 <span class="sd">        :param str return_type: return type (default is file)</span>
 <span class="sd">        :param str filename: path filename for save wav file if return_type is file.</span>
 <span class="sd">        :param bool preprocess: whether to preprocess text (convert numbers to Thai text and expand ๆ). Default is True.</span>
+<span class="sd">        :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words</span>
 <span class="sd">        :param kwargs: Additional parameters passed to the underlying model.</span>
 <span class="sd">        """</span>
+        <span class="n">effective_custom_dict</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">custom_dict</span> <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"custom_dict"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">)</span>
+
         <span class="c1"># Preprocess text if requested</span>
         <span class="k">if</span> <span class="n">preprocess</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.preprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_text</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">preprocess_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="s2">"FastThaiG2P"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">effective_custom_dict</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">preprocess_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">custom_dict</span><span class="o">=</span><span class="n">effective_custom_dict</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">preprocess_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="s2">"FastThaiG2P"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">effective_custom_dict</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">pythaitts.preprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_text</span>
+
+            <span class="n">text</span> <span class="o">=</span> <span class="n">preprocess_text</span><span class="p">(</span>
+                <span class="n">text</span><span class="p">,</span>
+                <span class="n">expand_numbers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">expand_maiyamok_char</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">custom_dict</span><span class="o">=</span><span class="n">effective_custom_dict</span><span class="p">,</span>
+            <span class="p">)</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"lunarlist"</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"lunarlist_onnx"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span><span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="o">==</span> <span class="s2">"vachana"</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"thai_som"</span><span class="p">,</span> <span class="s2">"Linda"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"thai_som"</span><span class="p">,</span> <span class="s2">"Linda"</span><span class="p">,</span> <span class="s2">"newvoice_female"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
                 <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"th_f_1"</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span><span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span><span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
+                <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+                <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
+                <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span>
+                <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="s2">"FastThaiG2P"</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="s2">"newvoice_female"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
                 <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"thai_som"</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span><span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span><span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"thai_som"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">call_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">effective_custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">call_kwargs</span><span class="p">[</span><span class="s2">"custom_dict"</span><span class="p">]</span> <span class="o">=</span> <span class="n">effective_custom_dict</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
+                <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+                <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
+                <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span>
+                <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">call_kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"makham"</span><span class="p">,</span> <span class="s2">"MakHamTTS"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="s2">"thai_som"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"newvoice_female"</span>
+            <span class="n">call_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">effective_custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">call_kwargs</span><span class="p">[</span><span class="s2">"custom_dict"</span><span class="p">]</span> <span class="o">=</span> <span class="n">effective_custom_dict</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
+                <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+                <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
+                <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span>
+                <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">call_kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"makham_paradee"</span><span class="p">,</span> <span class="s2">"MakHamTTS_paradee"</span><span class="p">):</span>
+            <span class="n">call_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">effective_custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">call_kwargs</span><span class="p">[</span><span class="s2">"custom_dict"</span><span class="p">]</span> <span class="o">=</span> <span class="n">effective_custom_dict</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
+                <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+                <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
+                <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span>
+                <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">call_kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"thai_som"</span><span class="p">,</span> <span class="s2">"newvoice_female"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
             <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"Linda"</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
             <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
             <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
             <span class="n">language_idx</span><span class="o">=</span><span class="n">language_idx</span><span class="p">,</span>
             <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span>
-            <span class="n">filename</span><span class="o">=</span><span class="n">filename</span>
+            <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
@@ -206,6 +333,7 @@
         <span class="n">play</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">preprocess</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">max_phonemes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
+        <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">"""</span>
@@ -217,11 +345,16 @@
 <span class="sd">        :param bool play: Whether to play audio chunks in real-time to speakers</span>
 <span class="sd">        :param bool preprocess: Whether to preprocess text (numbers to words, ๆ)</span>
 <span class="sd">        :param int max_phonemes: Maximum phonemes per synthesized chunk</span>
+<span class="sd">        :param custom_dict: Optional custom word dictionary for custom Thai pronunciation in words</span>
 <span class="sd">        :param kwargs: Additional parameters passed to the model</span>
 <span class="sd">        :return: Generator yielding audio chunks</span>
 <span class="sd">        """</span>
+        <span class="n">effective_custom_dict</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">custom_dict</span> <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"custom_dict"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">)</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"fastthaig2p"</span><span class="p">,</span> <span class="s2">"FastThaiG2P"</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="s2">"newvoice_female"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
                 <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"thai_som"</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
                 <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
@@ -230,6 +363,31 @@
                 <span class="n">play</span><span class="o">=</span><span class="n">play</span><span class="p">,</span>
                 <span class="n">preprocess</span><span class="o">=</span><span class="n">preprocess</span><span class="p">,</span>
                 <span class="n">max_phonemes</span><span class="o">=</span><span class="n">max_phonemes</span><span class="p">,</span>
+                <span class="n">custom_dict</span><span class="o">=</span><span class="n">effective_custom_dict</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"makham"</span><span class="p">,</span> <span class="s2">"MakHamTTS"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">speaker_idx</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"Linda"</span><span class="p">,</span> <span class="s2">"thai_som"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="n">speaker_idx</span> <span class="o">=</span> <span class="s2">"newvoice_female"</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
+                <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+                <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
+                <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span>
+                <span class="n">play</span><span class="o">=</span><span class="n">play</span><span class="p">,</span>
+                <span class="n">preprocess</span><span class="o">=</span><span class="n">preprocess</span><span class="p">,</span>
+                <span class="n">max_phonemes</span><span class="o">=</span><span class="n">max_phonemes</span><span class="p">,</span>
+                <span class="n">custom_dict</span><span class="o">=</span><span class="n">effective_custom_dict</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrained</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"makham_paradee"</span><span class="p">,</span> <span class="s2">"MakHamTTS_paradee"</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
+                <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+                <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
+                <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span>
+                <span class="n">play</span><span class="o">=</span><span class="n">play</span><span class="p">,</span>
+                <span class="n">preprocess</span><span class="o">=</span><span class="n">preprocess</span><span class="p">,</span>
+                <span class="n">max_phonemes</span><span class="o">=</span><span class="n">max_phonemes</span><span class="p">,</span>
+                <span class="n">custom_dict</span><span class="o">=</span><span class="n">effective_custom_dict</span><span class="p">,</span>
                 <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -237,13 +395,17 @@
 
             <span class="k">def</span><span class="w"> </span><span class="nf">_gen</span><span class="p">():</span>
                 <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream_text_to_chunks</span><span class="p">(</span>
-                    <span class="n">text</span><span class="p">,</span> <span class="n">max_phonemes</span><span class="o">=</span><span class="n">max_phonemes</span><span class="p">,</span> <span class="n">preprocess</span><span class="o">=</span><span class="n">preprocess</span>
+                    <span class="n">text</span><span class="p">,</span>
+                    <span class="n">max_phonemes</span><span class="o">=</span><span class="n">max_phonemes</span><span class="p">,</span>
+                    <span class="n">preprocess</span><span class="o">=</span><span class="n">preprocess</span><span class="p">,</span>
+                    <span class="n">custom_dict</span><span class="o">=</span><span class="n">effective_custom_dict</span><span class="p">,</span>
                 <span class="p">):</span>
                     <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="p">(</span>
                         <span class="n">text</span><span class="o">=</span><span class="n">chunk</span><span class="p">,</span>
                         <span class="n">speaker_idx</span><span class="o">=</span><span class="n">speaker_idx</span><span class="p">,</span>
                         <span class="n">return_type</span><span class="o">=</span><span class="n">return_type</span><span class="p">,</span>
                         <span class="n">preprocess</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">custom_dict</span><span class="o">=</span><span class="n">effective_custom_dict</span><span class="p">,</span>
                         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
                     <span class="p">)</span>
 
@@ -264,7 +426,10 @@
     <span class="s2">"en_g2p"</span><span class="p">,</span>
     <span class="s2">"en_to_ipa"</span><span class="p">,</span>
     <span class="s2">"en_ipa_to_thai_ipa"</span><span class="p">,</span>
+    <span class="s2">"MakHamTTS"</span><span class="p">,</span>
+    <span class="s2">"MakHamTTSParadee"</span><span class="p">,</span>
     <span class="s2">"preprocess_text"</span><span class="p">,</span>
+    <span class="s2">"load_custom_dict"</span><span class="p">,</span>
     <span class="s2">"num_to_thai"</span><span class="p">,</span>
     <span class="s2">"expand_maiyamok"</span><span class="p">,</span>
     <span class="s2">"chunk_text"</span><span class="p">,</span>

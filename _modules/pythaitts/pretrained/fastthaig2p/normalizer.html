@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pythaitts.pretrained.fastthaig2p.normalizer &mdash; PyThaiTTS ac06fa8 documentation</title>
+  <title>pythaitts.pretrained.fastthaig2p.normalizer &mdash; PyThaiTTS 217bd8d documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../../_static/documentation_options.js?v=bd22de34"></script>
+      <script src="../../../../_static/documentation_options.js?v=49ed083f"></script>
       <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/js/theme.js"></script>
@@ -511,8 +511,14 @@
     <span class="k">return</span> <span class="n">_decimal_to_thai</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_expand_abbreviations</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">_ABBREV_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">ABBREVIATIONS</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)],</span> <span class="n">text</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_expand_abbreviations</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_repl</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">word</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">and</span> <span class="p">(</span><span class="n">word</span> <span class="ow">in</span> <span class="n">custom_dict</span> <span class="ow">or</span> <span class="n">word</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">in</span> <span class="n">custom_dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">word</span>
+        <span class="k">return</span> <span class="n">ABBREVIATIONS</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">_ABBREV_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_repl</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
 
 
 <span class="c1"># Acronyms / initialisms that are always spelled letter-by-letter in Thai</span>
@@ -637,12 +643,14 @@
     <span class="k">return</span> <span class="kc">False</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_spell_latin_residue</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spell_all</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_spell_latin_residue</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spell_all</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Spell out Latin acronyms/codes Thai-style (A → เอ, B → บี) while</span>
 <span class="sd">    preserving pronounceable English words for English-to-Thai-IPA G2P.</span>
 <span class="sd">    """</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_repl</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">word</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">and</span> <span class="p">(</span><span class="n">word</span> <span class="ow">in</span> <span class="n">custom_dict</span> <span class="ow">or</span> <span class="n">word</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">custom_dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">word</span>
         <span class="k">if</span> <span class="n">spell_all</span> <span class="ow">or</span> <span class="n">_should_spell_latin_token</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">m</span><span class="o">.</span><span class="n">start</span><span class="p">(),</span> <span class="n">m</span><span class="o">.</span><span class="n">end</span><span class="p">()):</span>
             <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">LETTER_TO_THAI</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">word</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">word</span>
@@ -654,8 +662,15 @@
     <span class="k">return</span> <span class="n">_SYMBOL_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">SYMBOLS</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)],</span> <span class="n">text</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_expand_english_abbrevs</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">_ENGLISH_ABBREV_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">ENGLISH_ABBREVS</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()],</span> <span class="n">text</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_expand_english_abbrevs</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_repl</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">word</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">lower_word</span> <span class="o">=</span> <span class="n">word</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">custom_dict</span> <span class="ow">and</span> <span class="p">(</span><span class="n">word</span> <span class="ow">in</span> <span class="n">custom_dict</span> <span class="ow">or</span> <span class="n">lower_word</span> <span class="ow">in</span> <span class="n">custom_dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">word</span>
+        <span class="k">return</span> <span class="n">ENGLISH_ABBREVS</span><span class="p">[</span><span class="n">lower_word</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">_ENGLISH_ABBREV_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_repl</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_expand_units</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -676,7 +691,7 @@
 
 <div class="viewcode-block" id="normalize">
 <a class="viewcode-back" href="../../../../index.html#pythaitts.pretrained.fastthaig2p.normalize">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spell_latin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spell_latin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">custom_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Normalize text for TTS: convert numbers, abbreviations, and special</span>
 <span class="sd">    characters to speakable Thai words.</span>
 
@@ -684,12 +699,14 @@
 <span class="sd">    :param bool spell_latin: If True, spell all remaining Latin words letter-by-letter.</span>
 <span class="sd">        If False (default), only acronyms and single letters are spelled out,</span>
 <span class="sd">        leaving English words intact for English-to-Thai-IPA G2P.</span>
+<span class="sd">    :param dict custom_dict: Optional custom word dictionary to protect custom words</span>
+<span class="sd">        from being unintentionally expanded by abbreviations or normalizer rules.</span>
 <span class="sd">    """</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_maiyamok</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_thai_numerals_to_arabic</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_EMAIL_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_email_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_en_contractions</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_english_abbrevs</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_english_abbrevs</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">custom_dict</span><span class="o">=</span><span class="n">custom_dict</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_units</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_symbols</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_TIME_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_time_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
@@ -697,8 +714,8 @@
     <span class="n">text</span> <span class="o">=</span> <span class="n">_ALPHANUM_ID_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_alphanum_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_COMMA_NUMBER_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_strip_commas_and_convert</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">_NUMBER_PATTERN</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_number_or_id_to_thai</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_abbreviations</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="n">_spell_latin_residue</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">spell_all</span><span class="o">=</span><span class="n">spell_latin</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_expand_abbreviations</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">custom_dict</span><span class="o">=</span><span class="n">custom_dict</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_spell_latin_residue</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">spell_all</span><span class="o">=</span><span class="n">spell_latin</span><span class="p">,</span> <span class="n">custom_dict</span><span class="o">=</span><span class="n">custom_dict</span><span class="p">)</span>
     <span class="c1"># leftover hyphens (ชื่อ-นามสกุล) — connectors, not speakable tokens</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">text</span></div>
